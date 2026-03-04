@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="Block" format=3 uid="uid://cnsdjn71d6c5f"]
+
+[ext_resource type="Texture2D" uid="uid://cheoer5alfofg" path="res://Images/stone-texture-i-513836649.png" id="1_v7f3j"]
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resource/Block.cs" id="2_c4uec"]
+
+[resource]
+script = ExtResource("2_c4uec")
+Name = "Stone"
+AlbedoTexture = ExtResource("1_v7f3j")
+HpRange = Vector2(4, 6)
+ResourceId = "stone"
+metadata/_custom_type_script = "uid://bdslluvtpdifk"

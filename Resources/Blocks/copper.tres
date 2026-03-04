@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Block" format=3 uid="uid://bb1p64pifg82l"]
+
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resource/Block.cs" id="1_6ejfr"]
+[ext_resource type="Texture2D" uid="uid://d1hi1tqqo17i3" path="res://Images/blocks/concrete_color.png" id="1_tf3vp"]
+
+[resource]
+script = ExtResource("1_6ejfr")
+Name = "Copper"
+AlbedoTexture = ExtResource("1_tf3vp")
+HpRange = Vector2(6, 10)
+ResourceId = "copper"

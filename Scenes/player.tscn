@@ -1,0 +1,93 @@
+[gd_scene format=3 uid="uid://dkwan3rwis078"]
+
+[ext_resource type="Script" uid="uid://bda06j6bffxus" path="res://Scripts/Player/Player.cs" id="1_v0iea"]
+[ext_resource type="Script" uid="uid://c0crxpquoog05" path="res://Scripts/UI/DebugPanel.cs" id="2_cvnsp"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_f60y1"]
+height = 1.6
+radius = 0.3
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_cvnsp"]
+height = 0.2
+radius = 0.29
+
+[sub_resource type="Environment" id="Environment_cvnsp"]
+ssao_intensity = 16.0
+ssao_horizon = 0.25
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0, 0, 0, 1)
+fog_density = 1.0
+fog_depth_begin = 128.0
+fog_depth_end = 512.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_v0iea"]
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="player" type="CharacterBody3D" unique_id=485831506 node_paths=PackedStringArray("CollisionShape3D", "GroundedShape3D", "Camera3D")]
+physics_interpolation_mode = 1
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, 0)
+script = ExtResource("1_v0iea")
+CollisionShape3D = NodePath("CollisionShape3D")
+GroundedShape3D = NodePath("GroundedShape3D")
+Camera3D = NodePath("Camera3D")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1440880539]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CylinderShape3D_f60y1")
+
+[node name="GroundedShape3D" type="CollisionShape3D" parent="." unique_id=1890691108]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+shape = SubResource("CylinderShape3D_cvnsp")
+disabled = true
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1311303652]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2943115, 0)
+environment = SubResource("Environment_cvnsp")
+fov = 80.0
+near = 0.1
+far = 10000.0
+
+[node name="Panel2" type="Panel" parent="." unique_id=35533024 node_paths=PackedStringArray("PositionLabel", "HealthLabel")]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -183.0
+offset_right = 183.0
+offset_bottom = 88.0
+grow_horizontal = 2
+script = ExtResource("2_cvnsp")
+PositionLabel = NodePath("Label")
+HealthLabel = NodePath("Label2")
+
+[node name="Label" type="Label" parent="Panel2" unique_id=1072889969]
+layout_mode = 0
+offset_right = 223.0
+offset_bottom = 53.0
+text = "position
+"
+
+[node name="Label2" type="Label" parent="Panel2" unique_id=965809190]
+layout_mode = 0
+offset_top = 17.0
+offset_right = 223.0
+offset_bottom = 70.0
+text = "block health"
+
+[node name="Panel" type="Panel" parent="Panel2" unique_id=1373623817]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -5.0
+offset_top = 401.0
+offset_right = 5.0
+offset_bottom = 411.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_v0iea")

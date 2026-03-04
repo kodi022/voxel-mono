@@ -1,0 +1,9 @@
+[gd_resource type="ORMMaterial3D" format=3 uid="uid://bowov1gwrxx3p"]
+
+[ext_resource type="Texture2D" uid="uid://bvlxy3ibkcfr8" path="res://Images/missing.png" id="1_00ccb"]
+[ext_resource type="Texture2D" uid="uid://cb6tkc3vbfj0c" path="res://Images/default_orm.png" id="2_gvdqe"]
+
+[resource]
+albedo_texture = ExtResource("1_00ccb")
+orm_texture = ExtResource("2_gvdqe")
+texture_filter = 0

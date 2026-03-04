@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://d1kl380be6hq3"]
+
+[ext_resource type="Script" uid="uid://ca5dvpp1ay3xe" path="res://Scripts/Global/ChunkManager.cs" id="1_a02cp"]
+
+[node name="Node3D" type="Node3D" unique_id=791642177]
+
+[node name="Scripts" type="Node" parent="." unique_id=1818636627]
+script = ExtResource("1_a02cp")

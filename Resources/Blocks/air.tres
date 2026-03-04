@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Block" format=3 uid="uid://b0bdstd2akgq7"]
+
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resource/Block.cs" id="1_cjogu"]
+
+[resource]
+script = ExtResource("1_cjogu")
+Name = "Air"
+IsAir = true
+HpRange = Vector2(0, 0)
+ResourceId = "air"
+metadata/_custom_type_script = "uid://bdslluvtpdifk"

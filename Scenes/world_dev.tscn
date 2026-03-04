@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://7iyh5wkl0e2s"]
+
+[ext_resource type="Script" uid="uid://ca5dvpp1ay3xe" path="res://Scripts/Global/ChunkManager.cs" id="1_a3hqq"]
+
+[node name="WorldDev" type="Node3D" unique_id=2116090198]
+
+[node name="Node3D" type="Node3D" parent="." unique_id=69149564]
+script = ExtResource("1_a3hqq")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=724883831]
+transform = Transform3D(0.9067793, -0.37803218, 0.1866628, 0, 0.44274262, 0.89664876, -0.42160565, -0.81306255, 0.40146983, 0, 5.086652, 0)
+light_energy = 1.15
+light_indirect_energy = 1.2

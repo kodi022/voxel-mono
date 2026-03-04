@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://c5i5k0tx70rsr"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_j7ajo"]
+
+[node name="BlockSelect" type="Node3D" unique_id=493685679]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1980108601]
+transform = Transform3D(1.02, 0, 0, 0, 1.02, 0, 0, 0, 1.02, 0.5, 0.5, 0.5)
+transparency = 0.75
+cast_shadow = 0
+mesh = SubResource("BoxMesh_j7ajo")

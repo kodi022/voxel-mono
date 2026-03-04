@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://dembuhx5uk5vi"]
+
+[ext_resource type="Script" uid="uid://by1226agm4132" path="res://Scripts/World/Chunk.cs" id="1_byomg"]
+[ext_resource type="PhysicsMaterial" uid="uid://dysqlkdvh56bi" path="res://Resources/PhysicsMaterials/ChunkPhysicsMaterial.tres" id="2_bp61h"]
+
+[sub_resource type="PlaceholderMesh" id="PlaceholderMesh_byomg"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" unique_id=1493365794 node_paths=PackedStringArray("CollisionShape3D")]
+process_thread_group = 2
+process_thread_group_order = 1
+process_thread_messages = 0
+gi_mode = 0
+mesh = SubResource("PlaceholderMesh_byomg")
+script = ExtResource("1_byomg")
+CollisionShape3D = NodePath("StaticBody3D/CollisionShape3D")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1724753978]
+collision_mask = 0
+physics_material_override = ExtResource("2_bp61h")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" unique_id=1817009170]
