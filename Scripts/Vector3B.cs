@@ -20,6 +20,13 @@ public class Vector3B
         Z = z;
     }
 
+    public Vector3B(int x, int y, int z)
+    {
+        X = (sbyte)x;
+        Y = (sbyte)y;
+        Z = (sbyte)z;
+    }
+
     public static Vector3B operator +(Vector3B v, Vector3B other)
     {
         return new((sbyte)(v.X + other.X), (sbyte)(v.Y + other.Y), (sbyte)(v.Z + other.Z));

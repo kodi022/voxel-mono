@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dembuhx5uk5vi"]
+
+[ext_resource type="Script" uid="uid://by1226agm4132" path="res://Scripts/World/Region.cs" id="1_jvwss"]
+
+[node name="region" type="Node3D" unique_id=1673846465]
+script = ExtResource("1_jvwss")

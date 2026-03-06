@@ -4,7 +4,7 @@
 
 [node name="WorldDev" type="Node3D" unique_id=2116090198]
 
-[node name="Node3D" type="Node3D" parent="." unique_id=69149564]
+[node name="ChunkManager" type="Node3D" parent="." unique_id=69149564]
 script = ExtResource("1_a3hqq")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=724883831]

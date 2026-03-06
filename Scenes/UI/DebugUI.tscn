@@ -1,8 +1,12 @@
 [gd_scene format=3 uid="uid://ce8sdyp3hsb0r"]
 
+[ext_resource type="Script" uid="uid://crsty6yfcnijv" path="res://Scripts/UI/DebugUI.cs" id="1_fpupx"]
+[ext_resource type="FontFile" uid="uid://u738tvv68shv" path="res://Fonts/RobotoMono-Regular.ttf" id="2_7gdgf"]
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cyd5w"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_fpupx"]
+font = ExtResource("2_7gdgf")
 font_size = 14
 
 [node name="DebugUi" type="Control" unique_id=1709388601]
@@ -12,6 +16,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("1_fpupx")
 
 [node name="Panel" type="Panel" parent="." unique_id=745439718]
 layout_mode = 0
@@ -25,7 +30,7 @@ theme_override_styles/panel = SubResource("StyleBoxEmpty_cyd5w")
 layout_mode = 0
 offset_right = 203.0
 offset_bottom = 20.0
-text = "FPS: 0"
+text = "FPS: 60.0"
 label_settings = SubResource("LabelSettings_fpupx")
 
 [node name="Label2" type="Label" parent="Panel" unique_id=28552896]
@@ -33,7 +38,6 @@ layout_mode = 0
 offset_top = 16.0
 offset_right = 203.0
 offset_bottom = 36.0
-text = "BLOCK: 0"
 label_settings = SubResource("LabelSettings_fpupx")
 
 [node name="Label3" type="Label" parent="Panel" unique_id=335866255]
@@ -41,13 +45,4 @@ layout_mode = 0
 offset_top = 32.0
 offset_right = 203.0
 offset_bottom = 52.0
-text = "CHUNK: 0"
-label_settings = SubResource("LabelSettings_fpupx")
-
-[node name="Label4" type="Label" parent="Panel" unique_id=1385809773]
-layout_mode = 0
-offset_top = 48.0
-offset_right = 203.0
-offset_bottom = 68.0
-text = "CHUNK: 0"
 label_settings = SubResource("LabelSettings_fpupx")

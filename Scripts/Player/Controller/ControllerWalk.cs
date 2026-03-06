@@ -24,7 +24,7 @@ public class ControllerWalk : Controller
         var query = new PhysicsShapeQueryParameters3D
         {
             Shape = groundedShape,
-            Transform = new Transform3D(Basis.FromEuler(Vector3.Zero), player.GlobalPosition),
+            Transform = new Transform3D(Basis.Identity, player.GlobalPosition),
             Exclude = [player.GetRid()]
         };
 
@@ -46,8 +46,8 @@ public class ControllerWalk : Controller
         }
         else
         {
-            fallVelocity += 0.003f;
-            if (fallVelocity > 2f) fallVelocity = 2f;
+            fallVelocity += 0.008f;
+            if (fallVelocity > 1.5f) fallVelocity = 1.5f;
             wishVelocity.Y -= 0.5f + fallVelocity;
         }
 

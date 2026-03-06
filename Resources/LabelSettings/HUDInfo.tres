@@ -1,0 +1,9 @@
+[gd_resource type="LabelSettings" format=3 uid="uid://oti5e0ne4yea"]
+
+[ext_resource type="FontFile" uid="uid://gj5rsh37jd57" path="res://Fonts/Teko-Regular.ttf" id="1_k17ph"]
+
+[resource]
+font = ExtResource("1_k17ph")
+font_size = 18
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)

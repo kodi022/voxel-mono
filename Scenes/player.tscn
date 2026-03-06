@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://dkwan3rwis078"]
 
 [ext_resource type="Script" uid="uid://bda06j6bffxus" path="res://Scripts/Player/Player.cs" id="1_v0iea"]
-[ext_resource type="Script" uid="uid://c0crxpquoog05" path="res://Scripts/UI/DebugPanel.cs" id="2_cvnsp"]
+[ext_resource type="Script" uid="uid://c0crxpquoog05" path="res://Scripts/UI/HUD.cs" id="2_cvnsp"]
+[ext_resource type="LabelSettings" uid="uid://oti5e0ne4yea" path="res://Resources/LabelSettings/HUDInfo.tres" id="3_6t5aa"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_f60y1"]
 height = 1.6
@@ -15,11 +16,9 @@ radius = 0.29
 ssao_intensity = 16.0
 ssao_horizon = 0.25
 fog_enabled = true
-fog_mode = 1
-fog_light_color = Color(0, 0, 0, 1)
-fog_density = 1.0
-fog_depth_begin = 128.0
-fog_depth_end = 512.0
+fog_light_color = Color(0.06053035, 0.06053035, 0.060530342, 1)
+fog_depth_begin = 50.0
+fog_depth_end = 400.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_v0iea"]
 corner_radius_top_left = 5
@@ -56,8 +55,9 @@ anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -183.0
+offset_top = 5.0
 offset_right = 183.0
-offset_bottom = 88.0
+offset_bottom = 93.0
 grow_horizontal = 2
 script = ExtResource("2_cvnsp")
 PositionLabel = NodePath("Label")
@@ -69,6 +69,7 @@ offset_right = 223.0
 offset_bottom = 53.0
 text = "position
 "
+label_settings = ExtResource("3_6t5aa")
 
 [node name="Label2" type="Label" parent="Panel2" unique_id=965809190]
 layout_mode = 0
@@ -76,6 +77,7 @@ offset_top = 17.0
 offset_right = 223.0
 offset_bottom = 70.0
 text = "block health"
+label_settings = ExtResource("3_6t5aa")
 
 [node name="Panel" type="Panel" parent="Panel2" unique_id=1373623817]
 layout_mode = 1

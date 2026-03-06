@@ -10,12 +10,11 @@ public partial class ChunkManager : Node
 {
 	public static int Seed { get; private set; } = 8237358;
 
-	public static Dictionary<int, Chunk> AllChunks { get; private set; } = [];
-	public static Dictionary<int, Region> HashRegions { get; private set; } = [];
+	public static Dictionary<int, Region> AllRegions { get; private set; } = [];
 
-	public static List<int> InitializingChunks { get; private set; } = [];
+	public static List<int> GeneratingChunks { get; private set; } = [];
 
-	private static readonly PackedScene sceneChunk = GD.Load<PackedScene>("res://Scenes/chunk.tscn");
+	private static readonly PackedScene sceneRegion = GD.Load<PackedScene>("res://Scenes/region.tscn");
 	private static Window root;
 
 	// Called when the node enters the scene tree for the first time.
@@ -32,83 +31,51 @@ public partial class ChunkManager : Node
 		root.CallDeferred(Node.MethodName.AddChild, plr);
 	}
 
-	public static void SpawnChunk(Vector3 position, int LOD)
+	public static void SpawnChunk(Vector3 position)
 	{
-		position = position.ToChunkPosition();
-		var posHash = HashCode.Combine(position);
+		var regionPos = position.ToRegionPosition();
+		var regionPosHash = HashCode.Combine(regionPos);
 
-		if (InitializingChunks.Count > 32 || InitializingChunks.Contains(posHash)) return;
+		if (GeneratingChunks.Count >= 64) return;
 
-		if (AllChunks.TryGetValue(posHash, out Chunk chunk))
+		if (AllRegions.TryGetValue(regionPosHash, out Region region))
 		{
-			if (chunk.Initialized)
+			var chunk = region.GetChunk(position);
+
+			if (chunk is not null && !chunk.Generating && !chunk.Visible)
 			{
-				if (!chunk.Visible || chunk.LOD != LOD)
-				{
-					chunk.ClearMeshOnReady = false;
-
-					chunk.LOD = LOD;
-					if (LOD == 0) chunk.SetProcessing(true);
-					else chunk.SetProcessing(false);
-
-					chunk._Ready();
-					chunk.Visible = true;
-				}
+				chunk.Enable(region);
 			}
+
 			return;
 		}
-
-		chunk = AllChunks.FirstOrDefault(c => !c.Value.Visible).Value;
-		if (chunk is not null)
+		else
 		{
-			if (chunk.Initialized)
-			{
-				AllChunks.Remove(chunk.PositionHash);
-				AllChunks.Add(posHash, chunk);
-				chunk.WorldPosition = position;
-				chunk.PositionHash = posHash;
-				chunk.ClearMeshOnReady = true;
-
-				chunk.LOD = LOD;
-				if (LOD == 0) chunk.SetProcessing(true);
-				else chunk.SetProcessing(false);
-
-				chunk._Ready();
-				chunk.Visible = true;
-			}
-			return;
+			region = (Region)sceneRegion.Instantiate();
+			region.Name = "region_" + regionPos;
+			AllRegions.Add(regionPosHash, region);
+			root.CallDeferred(Node.MethodName.AddChild, region);
 		}
-
-		chunk = (Chunk)sceneChunk.Instantiate();
-		chunk.WorldPosition = position;
-		chunk.PositionHash = posHash;
-		chunk.ClearMeshOnReady = false;
-
-		chunk.LOD = LOD;
-		if (LOD == 0) chunk.SetProcessing(true);
-		else chunk.SetProcessing(false);
-
-		AllChunks.Add(posHash, chunk);
-		root.CallDeferred(Node.MethodName.AddChild, chunk);
 	}
 
 	public static void DestroyChunk(Vector3 position)
 	{
 		var chunk = FindChunk(position);
-		if (chunk is not null && chunk.Initialized & chunk.Visible)
+		if (chunk is not null && chunk.Visible)
 		{
-			chunk.Visible = false;
-			chunk.ProcessMode = ProcessModeEnum.Disabled;
+			chunk.Disable();
 		}
 	}
 
 	/// <summary> Finds Active chunks </summary>
 	public static Chunk FindChunk(Vector3 position)
 	{
-		position = position.ToChunkPosition();
+		position = position.ToRegionPosition();
 
-		if (AllChunks.TryGetValue(HashCode.Combine(position), out Chunk val))
-			return val;
+		if (AllRegions.TryGetValue(HashCode.Combine(position), out Region region))
+		{
+			return region.GetChunk(position);
+		}
 
 		return null;
 	}
