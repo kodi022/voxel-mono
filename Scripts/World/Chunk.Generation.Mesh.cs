@@ -1,7 +1,5 @@
 using Godot;
-using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Voxel.World;
@@ -10,17 +8,6 @@ public partial class Chunk
 {
     public static readonly OrmMaterial3D BlockMaterial = GD.Load<OrmMaterial3D>("res://Materials/Block.tres");
     public static readonly Texture2D MissingTexture = GD.Load<Texture2D>("res://Images/missing.png");
-
-    // up, down, left, right, forward, backward
-    // for array indexing and normals
-    public static readonly Vector3B[] Directions = [
-        new ( 0,  1,  0),
-        new ( 0, -1,  0),
-        new ( 0,  0,  1),
-        new ( 0,  0, -1),
-        new ( 1,  0,  0),
-        new (-1,  0,  0),
-    ];
 
     public static readonly Vector3[][] FaceVertexOffsets =
     [
@@ -42,134 +29,22 @@ public partial class Chunk
 
     private static readonly Dictionary<int, OrmMaterial3D> blockMaterials = [];
 
+    private Rid meshInstance;
+    private ArrayMesh meshInstanceData;
     private int surfaceCount = 0;
     private List<int> surfaceBlockIds = [];
 
-    private Rid meshInstance;
-    private ArrayMesh meshInstanceData;
+    private Rid physicsMesh;
+    private Rid physicsMeshShape;
+    private Godot.Collections.Dictionary<string, Variant> physicsMeshData;
+    private List<Vector3> physicsMeshFaces;
 
-    // private Rid physicsMesh;
-    // private Rid physicsMeshShape;
-    // private Godot.Collections.Dictionary<string, Variant> physicsMeshData;
-    // private List<Vector3> physicsMeshFaces;
-
-    public Task GenerateBlocks()
-    {
-        string[,,] tempBlocks = new string[ChunkSize, ChunkSize, ChunkSize];
-        Dictionary<int, List<Vector3I>> surfaces = [];
-
-        FastNoiseLite BiomeNoise = new()
-        {
-            Seed = ChunkManager.Seed + 1,
-            NoiseType = FastNoiseLite.NoiseTypeEnum.Cellular,
-            Frequency = 0.001f
-        };
-
-
-        FastNoiseLite RandomMain1 = new()
-        {
-            Seed = ChunkManager.Seed,
-            NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
-            Frequency = 0.003f
-        };
-        FastNoiseLite RandomMain2 = new()
-        {
-            Seed = ChunkManager.Seed,
-            NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex,
-            Frequency = 0.013f
-        };
-
-        FastNoiseLite Random2 = new()
-        {
-            Seed = ChunkManager.Seed + 2,
-            NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex,
-            Frequency = 5678f
-        };
-
-        IterateChunk((x, y, z) =>
-        {
-            var pos = new Vector3(x + WorldPosition.X, y + WorldPosition.Y, z + WorldPosition.Z);
-
-            string blockId = "base:air";
-
-            var rand = RandomMain1.GetNoise3D(pos.X, pos.Y, pos.Z) + RandomMain2.GetNoise3D(pos.X, pos.Y, pos.Z) * 0.5f;
-            var top = Mathf.Max(0, pos.Y * 0.1f);
-            if (rand > 0f + top)
-            {
-                if (Random2.GetNoise3D(pos.X, pos.Y, pos.Z) > -0.6f)
-                {
-                    blockId = "base:stone";
-                }
-                else
-                {
-                    blockId = "base:copper";
-                }
-            }
-
-            if (pos.DistanceSquaredTo(new Vector3(-0.5f, -0.5f, -0.5f)) < 40f)
-            {
-                blockId = "base:air";
-            }
-
-            tempBlocks[x, y, z] = blockId;
-        });
-
-        Dictionary<int, int> blockCount = [];
-        IterateChunk((x, y, z) =>
-        {
-            var block = ResourceManager.GetBlock(tempBlocks[x, y, z]);
-            var blockHpSize = block.HpRange.Y - block.HpRange.X;
-            block.Hp = Random2.GetNoise3D(x, y, z) * blockHpSize + block.HpRange.X;
-            Blocks[x, y, z] = block;
-
-            if (!blockCount.TryAdd(block.HashId, 1))
-            {
-                blockCount[block.HashId] += 1;
-            }
-        });
-
-        return Task.CompletedTask;
-    }
-
-    // private Task UpdateMesh(bool async = true)
-    // {
-    //     var thread = new Godot.GodotThread();
-
-    //     if (async)
-    //     {
-    //         var task = Task.Run(async () =>
-    //         {
-    //             meshGeneration = GenerateMesh();
-    //             await meshGeneration;
-    //             meshGeneration = null;
-    //             FinishMesh();
-    //         });
-    //     }
-    //     else
-    //     {
-    //         meshGeneration = GenerateMesh();
-    //         meshGeneration = null;
-    //         FinishMesh();
-    //     }
-
-    //     return Task.CompletedTask;
-    // }
-
-    public void DestroyMeshes()
-    {
-        if (meshInstance.IsValid)
-            RenderingServer.FreeRid(meshInstance);
-        // if (physicsMesh.IsValid)
-        //     PhysicsServer3D.FreeRid(physicsMesh);
-        Visible = false;
-    }
-
-    public Task GenerateMesh()
+    public Task GenerateMeshData()
     {
         // < blockId, < lodId, positions > >
         Dictionary<int, Dictionary<int, List<Vector4I>>> surfaces = [];
 
-        for (int LOD = 0; LOD < 5; LOD++)
+        for (int LOD = 0; LOD < 1; LOD++)
         {
             var blockSize = (sbyte)Mathf.Pow(2, LOD);
             for (sbyte x = 0; x < ChunkSize; x += blockSize) for (sbyte z = 0; z < ChunkSize; z += blockSize) for (sbyte y = 0; y < ChunkSize; y += blockSize)
@@ -209,18 +84,18 @@ public partial class Chunk
 
         var fullRenderDistance = Player.RenderDistance * ChunkSize * Player.RenderDistance * ChunkSize;
         meshInstanceData = new();
-        // physicsMeshFaces = [];
+        physicsMeshFaces = [];
+        surfaceBlockIds = [];
         foreach (var blockSurfaceKVP in surfaces)
         {
             int faces = 0;
             var meshVerts = new List<Vector3>();
-            //var physVerts = new List<Vector3>();
             var normals = new List<Vector3>();
             var uvs = new List<Vector2>();
             var indices = new List<int>();
             Godot.Collections.Dictionary lods = []; // (float, int[])   float is distance to use, int[] is indexes of the geometry
 
-            GD.Print($"{WorldPosition}: {blockSurfaceKVP.Key}");
+            // GD.Print($"--{WorldPosition}: {blockSurfaceKVP.Key}");
             foreach (var lodPosKVP in blockSurfaceKVP.Value)
             {
                 var blockSize = (sbyte)Mathf.Pow(2, lodPosKVP.Key);
@@ -229,13 +104,30 @@ public partial class Chunk
                 {
                     int x = pos.X, y = pos.Y, z = pos.Z, w = pos.W;
 
-                    // each vert
+                    // mesh verts
                     for (int v = 0; v < 4; v++)
                     {
                         var off = FaceVertexOffsets[w][v] * blockSize;
                         meshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
                         normals.Add((Vector3)Directions[w]);
                         uvs.Add((Vector2)FaceUVs[v] * blockSize);
+                    }
+
+                    // phys verts
+                    if (lodPosKVP.Key == 0)
+                    {
+                        var off = FaceVertexOffsets[w][0] * blockSize;
+                        physicsMeshFaces.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                        off = FaceVertexOffsets[w][1] * blockSize;
+                        physicsMeshFaces.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                        off = FaceVertexOffsets[w][2] * blockSize;
+                        physicsMeshFaces.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                        off = FaceVertexOffsets[w][2] * blockSize;
+                        physicsMeshFaces.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                        off = FaceVertexOffsets[w][3] * blockSize;
+                        physicsMeshFaces.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                        off = FaceVertexOffsets[w][0] * blockSize;
+                        physicsMeshFaces.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
                     }
 
                     var o = faces * 4;
@@ -247,15 +139,13 @@ public partial class Chunk
                 }
 
                 indices.AddRange(lodIndices);
-                //var distance = fullRenderDistance;
-                //distance *= blockSize;
-                lods.Add((float)lodPosKVP.Key * 100, lodIndices.ToArray());
-                GD.Print($"----- {lodPosKVP.Key}: {lodIndices.Count}");
+                var distance = fullRenderDistance / blockSize;
+                lods.Add((float)distance, lodIndices.ToArray());
+                // GD.Print($"-{lodPosKVP.Key}: {lodIndices.Count} ({lodIndices.First()})");
             }
 
             if (faces == 0) continue;
 
-            //physicsMeshFaces.AddRange(verts);
             var arrays = new Godot.Collections.Array();
             arrays.Resize((int)Mesh.ArrayType.Max);
             arrays[(int)Mesh.ArrayType.Vertex] = meshVerts.ToArray();
@@ -270,28 +160,22 @@ public partial class Chunk
             surfaceBlockIds.Add(blockSurfaceKVP.Key);
         }
 
+        return Task.CompletedTask;
+    }
+
+    public void CreateMesh()
+    {
+        if (meshInstance.IsValid)
+            RenderingServer.FreeRid(meshInstance);
+
+        if (surfaceCount == 0) return;
+
         var transform = new Transform3D(Basis.Identity, WorldPosition);
         meshInstance = RenderingServer.InstanceCreate();
         RenderingServer.InstanceSetBase(meshInstance, meshInstanceData.GetRid());
         RenderingServer.InstanceSetScenario(meshInstance, world3D.Scenario);
         RenderingServer.InstanceSetTransform(meshInstance, transform);
-
-        // ! only generate nearby somehow
-        // physicsMesh = PhysicsServer3D.BodyCreate();
-        // physicsMeshShape = PhysicsServer3D.ConcavePolygonShapeCreate();
-        // physicsMeshData = new() { { "faces", physicsMeshFaces.ToArray() }, { "backface_collision", true } };
-        // PhysicsServer3D.ShapeSetData(physicsMeshShape, physicsMeshData);
-        // PhysicsServer3D.BodyAddShape(physicsMesh, physicsMeshShape);
-        // PhysicsServer3D.BodySetMode(physicsMesh, PhysicsServer3D.BodyMode.Static);
-        // PhysicsServer3D.BodySetState(physicsMesh, PhysicsServer3D.BodyState.Transform, transform);
-        // PhysicsServer3D.BodySetSpace(physicsMesh, world3D.Space);
-
-        return Task.CompletedTask;
-    }
-
-    public void FinishMesh()
-    {
-        if (surfaceCount == 0) return;
+        RenderingServer.InstanceGeometrySetLodBias(meshInstance, -1f);
 
         int surfaceIndex = 0;
         foreach (var id in surfaceBlockIds)
@@ -300,6 +184,7 @@ public partial class Chunk
             {
                 mat = (OrmMaterial3D)BlockMaterial.Duplicate();
                 var block = ResourceManager.BlockRegistry[id];
+                mat.AlbedoColor = block.ColorTint;
                 mat.AlbedoTexture = LoadTextureFromBlock(block.AlbedoTexture, block.AlbedoTexturePath);
                 mat.NormalTexture = LoadTextureFromBlock(block.NormalTexture, block.NormalTexturePath);
                 mat.EmissionTexture = LoadTextureFromBlock(block.EmissionTexture, block.EmissionTexturePath);
@@ -309,8 +194,25 @@ public partial class Chunk
             RenderingServer.InstanceSetSurfaceOverrideMaterial(meshInstance, surfaceIndex, mat.GetRid());
             surfaceIndex++;
         }
-        surfaceBlockIds.Clear();
 
         Visible = true;
+    }
+
+    public void CreatePhysics()
+    {
+        if (physicsMesh.IsValid)
+            PhysicsServer3D.FreeRid(physicsMesh);
+
+        if (surfaceCount == 0) return;
+
+        var transform = new Transform3D(Basis.Identity, WorldPosition);
+        physicsMesh = PhysicsServer3D.BodyCreate();
+        physicsMeshShape = PhysicsServer3D.ConcavePolygonShapeCreate();
+        physicsMeshData = new() { { "faces", physicsMeshFaces.ToArray() }, { "backface_collision", true } };
+        PhysicsServer3D.ShapeSetData(physicsMeshShape, physicsMeshData);
+        PhysicsServer3D.BodyAddShape(physicsMesh, physicsMeshShape);
+        PhysicsServer3D.BodySetMode(physicsMesh, PhysicsServer3D.BodyMode.Static);
+        PhysicsServer3D.BodySetState(physicsMesh, PhysicsServer3D.BodyState.Transform, transform);
+        PhysicsServer3D.BodySetSpace(physicsMesh, world3D.Space);
     }
 }

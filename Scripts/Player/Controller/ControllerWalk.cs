@@ -5,7 +5,7 @@ using Voxel.World;
 
 public class ControllerWalk : Controller
 {
-    readonly CapsuleShape3D groundedShape = new() { Height = 0.01f, Radius = 0.295f };
+    readonly CapsuleShape3D groundedShape = new() { Height = 0.002f, Radius = 0.29f };
 
     private Vector3 wishVelocity = Vector3.Zero;
     private bool grounded = false;
@@ -28,19 +28,33 @@ public class ControllerWalk : Controller
             Exclude = [player.GetRid()]
         };
 
-        var trace = player.GetWorld3D().DirectSpaceState.IntersectShape(query, 1);
-        grounded = trace.Count > 0;
+        if (wishVelocity.Y < 0)
+        {
+            var trace = player.GetWorld3D().DirectSpaceState.IntersectShape(query, 1);
+            grounded = trace.Count > 0;
+        }
+        else
+        {
+            grounded = false;
+        }
 
-        wishVelocity.X += Input.GetAxis("backward", "forward") * 0.75f;
-        wishVelocity.Z += Input.GetAxis("left", "right") * 0.75f;
+        Vector3 movement = Vector3.Zero;
+        movement.X += Input.GetAxis("backward", "forward") * 0.8f;
+        movement.Z += Input.GetAxis("left", "right") * 0.8f;
+        wishVelocity += movement.Normalized();
 
         if (grounded)
         {
-            if (!groundedLastTick) wishVelocity.Y = -4f;
             if (Input.IsActionJustPressed("jump"))
             {
                 wishVelocity.Y = 11f;
             }
+
+            if (!groundedLastTick)
+            {
+                wishVelocity.Y = -2f;
+            }
+
             fallVelocity = 0f;
             wishVelocity.Y -= 0.1f;
         }
@@ -53,8 +67,8 @@ public class ControllerWalk : Controller
 
         wishVelocity *= new Vector3(0.8f, 0.96f, 0.8f);
 
-        var rotate = wishVelocity.Rotated(Vector3.Up, player.Rotation.Y + 1.5707963267948966f);
-        player.Velocity = rotate;
+        // idk why it wants rotated
+        player.Velocity = wishVelocity.Rotated(Vector3.Up, player.Rotation.Y + 1.5707963267948966f);
         player.MoveAndSlide();
 
         groundedLastTick = grounded;

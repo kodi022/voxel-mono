@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Godot;
 using Voxel.World;
@@ -9,7 +9,9 @@ namespace Voxel;
 public partial class Player : CharacterBody3D, IPawn
 {
 	public static Player Self { get; private set; }
-	public static int RenderDistance { get; private set; } = 1;
+	public static int RenderDistance { get; private set; } = 10;
+	// physics generation (future npc / updates?)
+	public static int SimulationDistance { get; private set; } = 8;
 
 	[Export]
 	public CollisionShape3D CollisionShape3D { get; set; }
@@ -32,8 +34,6 @@ public partial class Player : CharacterBody3D, IPawn
 
 	public float Health { get; set; }
 
-	private readonly List<(Vector3 pos, float distSqr)> chunkToSpawn = [];
-	private readonly HashSet<Vector3> chunkToDestroy = [];
 	private bool processingRenderDistance = false;
 	private Node debugUI;
 
@@ -72,20 +72,7 @@ public partial class Player : CharacterBody3D, IPawn
 
 		WithinChunk = ChunkManager.FindChunk(GlobalPosition);
 
-		if (!processingRenderDistance)
-		{
-			foreach (var (pos, distSqr) in chunkToSpawn)
-			{
-				ChunkManager.SpawnChunk(pos);
-			}
-			chunkToSpawn.Clear();
-			foreach (var chunkPos in chunkToDestroy)
-			{
-				ChunkManager.DestroyChunk(chunkPos);
-			}
-			chunkToDestroy.Clear();
-			ProcessRenderDistance(GlobalPosition);
-		}
+		if (!processingRenderDistance) ProcessRenderDistance(GlobalPosition);
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -135,13 +122,14 @@ public partial class Player : CharacterBody3D, IPawn
 					}
 					break;
 				case Key.F2:
-
+					if (CurrentController is ControllerWalk) CurrentController = new ControllerFly();
+					else CurrentController = new ControllerWalk();
 					break;
 				case Key.F3:
-					CurrentController = new ControllerWalk();
+
 					break;
 				case Key.F4:
-					CurrentController = new ControllerFly();
+
 					break;
 				case Key.F5:
 					GlobalPosition = Vector3.Zero;
@@ -149,48 +137,94 @@ public partial class Player : CharacterBody3D, IPawn
 					Rotation = new Vector3(0, 0, 0);
 					break;
 				case Key.F6:
-					if (GetViewport().DebugDraw == Viewport.DebugDrawEnum.Wireframe) GetViewport().DebugDraw = Viewport.DebugDrawEnum.Disabled;
-					else GetViewport().DebugDraw = Viewport.DebugDrawEnum.Wireframe;
+					var viewport = GetViewport();
+					if (viewport.DebugDraw == Viewport.DebugDrawEnum.Disabled) viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
+					else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Wireframe) viewport.DebugDraw = Viewport.DebugDrawEnum.DisableLod;
+					else viewport.DebugDraw = Viewport.DebugDrawEnum.Disabled;
 					break;
 			}
 		}
 	}
 
-	// ! change so chunkmanager will churn through full output, and replace every few seconds instead of as fast as possible
 	private async void ProcessRenderDistance(Vector3 globalPosition)
 	{
 		processingRenderDistance = true;
 
 		await Task.Run(async () =>
 		{
-			chunkToSpawn.Add((-Vector3.One * 16, 0));
-			// ! var cull = RenderDistance * Chunk.ChunkSize * RenderDistance * Chunk.ChunkSize;
-			// var offsetGlobalPosition = globalPosition - Vector3.One * (Chunk.ChunkSize * 0.5f);
+			//chunkToSpawn.Add((-Vector3.One * 16, 0));
+			List<(Vector3 pos, float distSqr)> chunkToSpawn = [];
+			List<Vector3> chunkToDestroy = [];
 
-			// for (int x = -RenderDistance - 8; x < RenderDistance + 8; x++)
-			// {
-			// 	for (int y = -RenderDistance - 8; y < RenderDistance + 8; y++)
-			// 	{
-			// 		for (int z = -RenderDistance - 8; z < RenderDistance + 8; z++)
-			// 		{
-			// 			var pos = new Vector3(x * Chunk.ChunkSize, y * Chunk.ChunkSize, z * Chunk.ChunkSize);
-			// 			var chunkPos = (offsetGlobalPosition + pos).ToChunkPosition();
-			// 			var distSqr = (chunkPos - offsetGlobalPosition).LengthSquared();
+			var cullDistance = RenderDistance * Chunk.ChunkSize * RenderDistance * Chunk.ChunkSize;
+			var simDistance = SimulationDistance * Chunk.ChunkSize * SimulationDistance * Chunk.ChunkSize;
+			var offsetGlobalPosition = globalPosition - Vector3.One * (Chunk.ChunkSize * 0.5f);
+			for (int x = -RenderDistance - 6; x < RenderDistance + 6; x++)
+			{
+				for (int y = -RenderDistance - 6; y < RenderDistance + 6; y++)
+				{
+					for (int z = -RenderDistance - 6; z < RenderDistance + 6; z++)
+					{
+						var pos = new Vector3(x * Chunk.ChunkSize, y * Chunk.ChunkSize, z * Chunk.ChunkSize);
+						var chunkPos = (offsetGlobalPosition + pos).ToChunkPosition();
+						var distSqr = (chunkPos - offsetGlobalPosition).LengthSquared();
 
-			// 			if (distSqr < cull)
-			// 			{
-			// 				chunkToSpawn.Add((chunkPos, distSqr));
-			// 			}
-			// 			else
-			// 			{
-			// 				chunkToDestroy.Add(chunkPos);
-			// 			}
-			// 		}
-			// 	}
-			// }
+						if (distSqr < cullDistance)
+						{
+							var regionHash = HashCode.Combine(chunkPos.ToRegionPosition());
+							if (ChunkManager.Regions.TryGetValue(regionHash, out Region region))
+							{
+								var chunkPosHash = HashCode.Combine(chunkPos);
+								if (!region.Chunks.TryGetValue(chunkPosHash, out Chunk chunk))
+								{
+									chunkToSpawn.Add((chunkPos, distSqr));
+								}
+								else
+								{
+									if (distSqr < simDistance)
+									{
+										if (!chunk.Simulating)
+											chunk.EnableSimulation();
+									}
+									else
+									{
+										if (chunk.Simulating)
+											chunk.DisableSimulation();
+									}
+								}
+							}
+							else
+							{
+								chunkToSpawn.Add((chunkPos, distSqr));
+							}
+						}
+						else
+						{
+							var regionHash = HashCode.Combine(chunkPos.ToRegionPosition());
+							if (ChunkManager.Regions.TryGetValue(regionHash, out Region region))
+							{
+								if (region.Chunks.ContainsKey(HashCode.Combine(chunkPos)))
+								{
+									chunkToDestroy.Add(chunkPos);
+								}
+							}
+						}
+					}
+				}
+			}
 
-			// // sort closest to furthest
-			// chunkToSpawn.Sort((a, b) => a.distSqr.CompareTo(b.distSqr));
+			// sort closest to furthest
+			chunkToSpawn.Sort((a, b) => a.distSqr.CompareTo(b.distSqr));
+
+			List<Vector3> a = [];
+			foreach (var (pos, distSqr) in chunkToSpawn)
+			{
+				a.Add(pos);
+			}
+			ChunkManager.SpawnChunksOverride(a);
+			ChunkManager.DestroyChunks(chunkToDestroy);
+
+			await Task.Delay(500);
 		});
 
 		processingRenderDistance = false;

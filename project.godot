@@ -25,6 +25,7 @@ TimerManager="*uid://70gkq7j6uc0m"
 window/size/viewport_width=1600
 window/size/viewport_height=900
 window/size/initial_position_type=3
+window/vsync/vsync_mode=0
 
 [dotnet]
 

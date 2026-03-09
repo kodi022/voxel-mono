@@ -7,13 +7,16 @@ namespace Voxel;
 public partial class ResourceManager : Node
 {
 	public static Dictionary<int, Block> BlockRegistry { get; private set; } = [];
+	public static Dictionary<int, BlockOre> BlockOreRegistry { get; private set; } = [];
+
 	public static Dictionary<int, Biome> BiomeRegistry { get; private set; } = [];
 	public static Dictionary<int, Structure> StructureRegistry { get; private set; } = [];
 
 	// Called when the node enters the scene tree for the first time.
 	public override void _Ready()
 	{
-		BlockRegistry = RegisterBlocks("res://Resources/Blocks/");
+		RegisterBlocks("res://Resources/Blocks/");
+
 		BiomeRegistry = RegisterGeneric<Biome>("res://Resources/Biomes/");
 		StructureRegistry = RegisterGeneric<Structure>("res://Resources/Structures/");
 	}
@@ -38,30 +41,28 @@ public partial class ResourceManager : Node
 		return registry;
 	}
 
-	private static Dictionary<int, Block> RegisterBlocks(string path)
+	private static void RegisterBlocks(string path)
 	{
-		Dictionary<int, Block> registry = [];
-
 		foreach (var file in ResourceLoader.ListDirectory(path))
 		{
 			if (file == "") continue;
 
 			var resource = ResourceLoader.Load(path + file);
-			if (resource is Block block)
+			if (resource is Block b)
 			{
-				block.BuildIds();
+				b.BuildIds();
 
-				if (block.FullId == "base:air")
+				if (b.FullId == "base:air")
 				{
-					block.HashId = 0;
+					b.HashId = 0;
 				}
 
-				registry.Add(block.HashId, block);
+				BlockRegistry.Add(b.HashId, b);
+				if (b is BlockOre bOre) BlockOreRegistry.Add(bOre.HashId, bOre);
 			}
 		}
 
-		GD.Print($"BlockRegistry: {registry.Count} Blocks");
-		return registry;
+		GD.Print($"BlockRegistry: {BlockRegistry.Count} Blocks");
 	}
 
 	public static Block GetBlock(string blockId)

@@ -8,31 +8,57 @@ public partial class Chunk
 {
     public const int ChunkSize = 16;
 
+    public int[,,] BlockBiome { get; set; }
     public Block[,,] Blocks { get; set; }
 
-    public Vector3 WorldPosition { get; set; }
-    public int PositionHash { get; set; }
-    public bool Visible = false;
+    public readonly Vector3 WorldPosition;
+    public readonly int PositionHash;
+
+    public bool Visible { get; private set; } = false;
+    public bool Simulating { get; private set; } = false;
+
     public bool Generating { get; set; } = false;
 
-    private Region region;
-    private World3D world3D;
+    private readonly Region region;
+    private readonly World3D world3D;
 
     // * enabling / disabling
 
-    public void Enable(Region region)
+    public Chunk(Region region, Vector3 worldPosition)
     {
         this.region = region;
         world3D = region.GetWorld3D();
-
         Blocks ??= new Block[ChunkSize, ChunkSize, ChunkSize];
+
+        WorldPosition = worldPosition;
+        PositionHash = HashCode.Combine(WorldPosition);
 
         region.ChunkGenerate(this);
     }
 
-    public void Disable()
+    ~Chunk()
     {
-        DestroyMeshes();
+        if (meshInstance.IsValid)
+            RenderingServer.FreeRid(meshInstance);
+
+        if (physicsMesh.IsValid)
+            PhysicsServer3D.FreeRid(physicsMesh);
+
+        Visible = false;
+    }
+
+    public void EnableSimulation()
+    {
+        CreatePhysics();
+        Simulating = true;
+    }
+
+    public void DisableSimulation()
+    {
+        //if (physicsMesh.IsValid)
+        //    PhysicsServer3D.FreeRid(physicsMesh);
+
+        Simulating = false;
     }
 
     // * modifying blocks
@@ -95,20 +121,6 @@ public partial class Chunk
         if (!pos.IsInside(ChunkSize)) return (Block)"block:air";
 
         return Blocks[(int)pos.X, (int)pos.Y, (int)pos.Z];
-    }
-
-    private static void IterateChunk(Action<sbyte, sbyte, sbyte> action)
-    {
-        for (sbyte x = 0; x < ChunkSize; x++)
-        {
-            for (sbyte z = 0; z < ChunkSize; z++)
-            {
-                for (sbyte y = 0; y < ChunkSize; y++)
-                {
-                    action.Invoke(x, y, z);
-                }
-            }
-        }
     }
 
     private static Texture2D LoadTextureFromBlock(Texture2D resourceTexture, string resourceTexturePath)

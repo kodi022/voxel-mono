@@ -11,49 +11,63 @@ public static class Extensions
         return node3D.GlobalPosition - node3D.GlobalTransform.Basis.Z * distance;
     }
 
-    public static Vector3 ToRegionPosition(this Vector3 v)
+    public static Vector3 ToRegionPosition(this in Vector3 v)
     {
         var size = Chunk.ChunkSize * Chunk.ChunkSize;
-        v /= size;
-        return v.Floor() * size;
+        return (v / size).Floor() * size;
     }
 
-    public static Vector3 ToChunkPosition(this Vector3 v)
+    public static Vector3 ToChunkPosition(this in Vector3 v)
     {
-        v /= Chunk.ChunkSize;
-        return v.Floor() * Chunk.ChunkSize;
+        return (v / Chunk.ChunkSize).Floor() * Chunk.ChunkSize;
     }
 
-    public static Vector3 ToBlockLocalPosition(this Vector3 v)
+    public static Vector3 ToBlockLocalPosition(this in Vector3 v)
     {
-        v %= Chunk.ChunkSize;
-        return v.Floor();
+        return (v % Chunk.ChunkSize).Floor();
     }
 
     // possibly slightly more efficient option
-    public static Vector3 ToBlockLocalPosition(this Vector3 v, in Vector3 chunkPos)
+    public static Vector3 ToBlockLocalPosition(this in Vector3 v, in Vector3 chunkPos)
     {
-        v -= chunkPos;
+        return (v - chunkPos).Floor();
+    }
+
+    public static Vector3 ToBlockGlobalPosition(this in Vector3 v)
+    {
         return v.Floor();
     }
 
-    public static Vector3 ToBlockGlobalPosition(this Vector3 v)
+    // vector3I
+
+    public static Vector3I ToBlockLocalPosition(this in Vector3I v)
     {
-        return v.Floor();
+        return v % Chunk.ChunkSize;
     }
 
-    public static bool IsInside(this Vector3 v, float bottomLimit, float topLimit)
+    // possibly slightly more efficient option
+    public static Vector3I ToBlockLocalPosition(this in Vector3I v, in Vector3I chunkPos)
+    {
+        return v - chunkPos;
+    }
+
+    public static bool IsInside(this in Vector3 v, in float topLimit)
+    {
+        return topLimit > v.X && v.X > -1 && topLimit > v.Y && v.Y > -1 && topLimit > v.Z && v.Z > -1;
+    }
+
+    public static bool IsInside(this in Vector3 v, in float bottomLimit, in float topLimit)
     {
         return topLimit > v.X && v.X > bottomLimit && topLimit > v.Y && v.Y > bottomLimit && topLimit > v.Z && v.Z > bottomLimit;
     }
 
-    public static bool IsInside(this Vector3 v, float topLimit)
+    public static bool IsInside(this in Vector3I v, in int topLimit)
     {
         return topLimit > v.X && v.X > -1 && topLimit > v.Y && v.Y > -1 && topLimit > v.Z && v.Z > -1;
     }
 
-    public static bool IsInside(this Vector3I v, int topLimit)
+    public static bool IsInside(this in Vector3I v, in float bottomLimit, in float topLimit)
     {
-        return topLimit > v.X && v.X > -1 && topLimit > v.Y && v.Y > -1 && topLimit > v.Z && v.Z > -1;
+        return topLimit > v.X && v.X > bottomLimit && topLimit > v.Y && v.Y > bottomLimit && topLimit > v.Z && v.Z > bottomLimit;
     }
 }

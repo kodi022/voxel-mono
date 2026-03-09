@@ -21,27 +21,21 @@ public partial class Region : Node3D
 		ready = true;
 	}
 
-	public Chunk GetChunk(Vector3 position)
+	public void ChunkCreate(Vector3 position)
 	{
-		if (!ready) return null;
+		if (!ready) return;
 
 		position = position.ToChunkPosition();
 		var posHash = HashCode.Combine(position);
 
-		if (!Chunks.TryGetValue(posHash, out Chunk chunk))
+		if (!Chunks.ContainsKey(posHash))
 		{
-			chunk = new Chunk
-			{
-				WorldPosition = position,
-				PositionHash = posHash
-			};
+			var chunk = new Chunk(this, position);
 			Chunks.Add(posHash, chunk);
 		}
-
-		return chunk;
 	}
 
-	public Chunk GetChunk(int posHash)
+	public Chunk ChunkGet(int posHash)
 	{
 		if (!ready) return null;
 
@@ -53,37 +47,67 @@ public partial class Region : Node3D
 		return null;
 	}
 
+	public Chunk ChunkGet(Vector3 position)
+	{
+		if (!ready) return null;
+
+		position = position.ToChunkPosition();
+
+		if (Chunks.TryGetValue(HashCode.Combine(position), out Chunk chunk))
+		{
+			return chunk;
+		}
+
+		return null;
+	}
+
+	public void ChunkDestroy(int posHash)
+	{
+		if (Chunks.TryGetValue(posHash, out Chunk chunk))
+		{
+			if (chunk is not null)
+			{
+				ChunkManager.GeneratingChunks.Remove(chunk.PositionHash);
+				Chunks[posHash] = null;
+				Chunks.Remove(posHash);
+			}
+		}
+	}
+
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkGenerate(Chunk chunk)
 	{
 		chunk.Generating = true;
 		ChunkManager.GeneratingChunks.Add(chunk.PositionHash);
 
-		chunk.DestroyMeshes();
 		await Task.Run(async () =>
 		{
-			await chunk.GenerateBlocks();
-			await chunk.GenerateMesh();
+			await chunk.GenerateBlockData();
+			await chunk.GenerateMeshData();
+			CallDeferred(nameof(ChunkFinish), chunk.PositionHash);
 		});
-		CallDeferred(nameof(ChunkFinish), chunk.PositionHash);
 	}
 
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkUpdate(Chunk chunk)
 	{
-		chunk.DestroyMeshes();
 		await Task.Run(async () =>
 		{
-			await chunk.GenerateMesh();
+			await chunk.GenerateMeshData();
+			CallDeferred(nameof(ChunkFinish), chunk.PositionHash);
 		});
-		CallDeferred(nameof(ChunkFinish), chunk.PositionHash);
 	}
 
+	// necessary because CallDeferred cannot call functions on other objects. arg has to be Godot.Variant
 	private void ChunkFinish(int chunkPosHash)
 	{
-		var chunk = GetChunk(chunkPosHash);
-		chunk.FinishMesh();
+		var chunk = ChunkGet(chunkPosHash);
+
+		chunk.CreateMesh();
+		if (chunk.Simulating) chunk.CreatePhysics();
+
 		chunk.Generating = false;
+
 		ChunkManager.GeneratingChunks.Remove(chunk.PositionHash);
 	}
 }

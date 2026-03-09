@@ -16,7 +16,7 @@ public class ControllerFly : Controller
         wishVelocity.X += Input.GetAxis("backward", "forward");
         wishVelocity.Z += Input.GetAxis("left", "right");
         wishVelocity = wishVelocity.Normalized().Rotated(Vector3.Up, player.Rotation.Y + 1.5707963267948966f);
-        player.Velocity = wishVelocity * 15f;
+        player.Velocity = wishVelocity * 20f;
 
         if (Input.IsKeyPressed(Key.Space))
         {

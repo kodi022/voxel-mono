@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Block" format=3 uid="uid://bgwg43m5p3crj"]
+
+[ext_resource type="Texture2D" uid="uid://dme48etqb6jhd" path="res://Images/blocks/texture3.png" id="1_a2j1l"]
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resource/Block/Block.cs" id="2_6ff8i"]
+
+[resource]
+script = ExtResource("2_6ff8i")
+Name = "Irrefragabiles"
+Unbreakable = true
+ColorTint = Color(0.1764706, 0.1764706, 0.1882353, 1)
+AlbedoTexture = ExtResource("1_a2j1l")
+HpRange = Vector2(0, 0)
+ResourceId = "irrefragabiles"

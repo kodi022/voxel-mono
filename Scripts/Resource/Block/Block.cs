@@ -53,12 +53,16 @@ public partial class Block : VoxelResource
 	[Export]
 	public bool IsAir { get; set; } = false;
 	[Export]
-	public bool IsOre { get; set; } = false;
-	[Export]
 	public BlockDirections DirectionSupport { get; set; } = BlockDirections.None;
 	[Export]
 	public bool Unbreakable { get; set; }
+	[Export]
+	public bool VulnerableLava { get; set; }
+	[Export]
+	public bool VulnerableBomb { get; set; }
 
+	[Export]
+	public Color ColorTint { get; set; } = Color.Color8(255, 255, 255);
 	[Export]
 	public Texture2D AlbedoTexture { get; set; }
 	[Export]
