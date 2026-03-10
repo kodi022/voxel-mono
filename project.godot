@@ -18,7 +18,6 @@ config/icon="res://icon.svg"
 [autoload]
 
 ResourceManager="*uid://c6v7j6ocualtt"
-TimerManager="*uid://70gkq7j6uc0m"
 
 [display]
 

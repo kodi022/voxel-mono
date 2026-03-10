@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="BlockOre" format=3 uid="uid://btxrmmckuwacg"]
+
+[ext_resource type="Texture2D" uid="uid://cdcji7kk4posg" path="res://Images/blocks/texture2.png" id="1_tbikk"]
+[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resource/Block/BlockOre.cs" id="2_r4xgk"]
+
+[resource]
+script = ExtResource("2_r4xgk")
+GroupSize = 3
+AmountPerChunk = 0.3
+Name = "Gold"
+ColorTint = Color(0.81900525, 0.69996125, 0.26938796, 1)
+AlbedoTexture = ExtResource("1_tbikk")
+HpRange = Vector2(10, 14)
+ResourceId = "gold"

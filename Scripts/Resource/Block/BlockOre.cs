@@ -8,5 +8,5 @@ public partial class BlockOre : Block
     [Export]
     public int GroupSize { get; set; } = 1;
     [Export]
-    public float ChancePerChunk { get; set; } = 0.5f;
+    public float AmountPerChunk { get; set; } = 0.5f;
 }

@@ -20,6 +20,14 @@ public partial class HUD : Panel
 	public override void _Process(double delta)
 	{
 		PositionLabel.Text = $"{Player.Self.GlobalPosition.ToBlockGlobalPosition()}";
-		HealthLabel.Text = $"{Chunk.ChunkSelectBlock(Player.Self.AimBlockPosition)?.Hp ?? 0:0.0}";
+		var block = Chunk.ChunkSelectBlock(Player.Self.AimBlockPosition);
+		if (block is not null)
+		{
+			HealthLabel.Text = $"{block.Hp:0.0} {block.Name}";
+		}
+		else
+		{
+			HealthLabel.Text = "";
+		}
 	}
 }

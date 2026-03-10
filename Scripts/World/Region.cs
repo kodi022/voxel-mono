@@ -91,6 +91,7 @@ public partial class Region : Node3D
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkUpdate(Chunk chunk)
 	{
+		chunk.Generating = true;
 		await Task.Run(async () =>
 		{
 			await chunk.GenerateMeshData();
@@ -102,6 +103,7 @@ public partial class Region : Node3D
 	private void ChunkFinish(int chunkPosHash)
 	{
 		var chunk = ChunkGet(chunkPosHash);
+		if (chunk is null) return;
 
 		chunk.CreateMesh();
 		if (chunk.Simulating) chunk.CreatePhysics();

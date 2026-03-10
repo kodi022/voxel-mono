@@ -1,8 +1,6 @@
 using Godot;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,17 +19,25 @@ public partial class Chunk
         new (-1,  0,  0),
     ];
 
-    // FastNoiseLite BiomeNoise = new()
-    // {
-    //     Seed = ChunkManager.Seed + 1,
-    //     NoiseType = FastNoiseLite.NoiseTypeEnum.Cellular,
-    //     Frequency = 0.001f
-    // };
+    // static noise because it seems godot does not free old instanced noises
+    // previously created FastNoiseLite inside of NoiseLayers, godot quickly kept >2000000 of them
+    // ! make noise settings struct, get from list using struct hash
+    FastNoiseLite noise = new();
+
+    FastNoiseLite SetNoiseSettings(int seedOffset, FastNoiseLite.NoiseTypeEnum noiseType, float frequency = 1f, float warpAmplitude = 0f)
+    {
+        bool warpEnabled = warpAmplitude != 0;
+        noise.Seed = ChunkManager.Seed + (seedOffset % 10);
+        noise.NoiseType = noiseType;
+        noise.Frequency = frequency;
+        noise.DomainWarpEnabled = warpEnabled;
+        noise.DomainWarpAmplitude = warpAmplitude;
+        noise.DomainWarpType = FastNoiseLite.DomainWarpTypeEnum.BasicGrid;
+        return noise;
+    }
 
     public Task GenerateBlockData()
     {
-        //Stopwatch a = new();
-        //a.Start();
         // ! string bad replace with id or something later
         string[,,] tempBlocks = new string[ChunkSize, ChunkSize, ChunkSize];
 
@@ -59,7 +65,7 @@ public partial class Chunk
                         string blockId = layer.Generate(ref blockGenInput);
 
                         // ! remove later
-                        if (new Vector2(pos.X, pos.Z).DistanceSquaredTo(new Vector2(-5f, -5f)) < 8f)
+                        if (new Vector2(pos.X, pos.Z).DistanceSquaredTo(new Vector2(-6f, -6f)) < 8f)
                         {
                             continue;
                         }
@@ -70,11 +76,7 @@ public partial class Chunk
             }
         }
 
-        FastNoiseLite NoiseHealth = new()
-        {
-            Seed = ChunkManager.Seed + 2,
-            NoiseType = FastNoiseLite.NoiseTypeEnum.Value,
-        };
+        var noise = SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value);
 
         for (sbyte x = 0; x < ChunkSize; x++)
         {
@@ -86,15 +88,14 @@ public partial class Chunk
                     if (!block.IsAir && !block.Unbreakable)
                     {
                         var blockHpSize = block.HpRange.Y - block.HpRange.X;
-                        block.Hp = NoiseHealth.GetNoise3D(x, y, z) * blockHpSize + block.HpRange.X;
+                        block.Hp = noise.GetNoise3D(x, y, z) * blockHpSize + block.HpRange.X;
                     }
 
                     Blocks[x, y, z] = block;
                 }
             }
         }
-        //a.Stop();
-        //GD.Print(a.ElapsedMilliseconds);
+
         return Task.CompletedTask;
     }
 
@@ -136,27 +137,14 @@ public partial class Chunk
 
         public override string Generate(ref BlockGenInput input)
         {
-            FastNoiseLite RandomMain1 = new()
-            {
-                Seed = ChunkManager.Seed,
-                NoiseType = FastNoiseLite.NoiseTypeEnum.Perlin,
-                Frequency = 0.002f,
-                DomainWarpEnabled = true,
-                DomainWarpAmplitude = 3,
-            };
-            FastNoiseLite RandomMain2 = new()
-            {
-                Seed = ChunkManager.Seed,
-                NoiseType = FastNoiseLite.NoiseTypeEnum.Simplex,
-                Frequency = 0.013f
-            };
+            var rand = 0f;
+            rand += input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Perlin, 0.0016f).GetNoise3Dv(input.Position);
+            rand += input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value, 0.0042563f).GetNoise3Dv(input.Position) * 0.2f;
+            rand += input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value, 0.025162f).GetNoise3Dv(input.Position) * 0.1f;
 
             string block = "base:air";
-            var rand = RandomMain1.GetNoise3D(input.Position.X, input.Position.Y, input.Position.Z) +
-                RandomMain2.GetNoise3D(input.Position.X, input.Position.Y, input.Position.Z) * 0.5f;
-
             var top = Mathf.Max(0, input.Position.Y * 0.1f);
-            if (rand > 0.2f + top)
+            if (rand > -0.1f + top)
             {
                 if (new Vector3(input.Position.X, input.Position.Y, input.Position.Z).DistanceSquaredTo(new Vector3(-0.5f, -0.5f, -0.5f)) > 40f)
                     block = "base:stone";
@@ -168,30 +156,47 @@ public partial class Chunk
 
     public class BlockGenLayerOre : BlockGenLayer
     {
+        private static float GetSeededRandom(Vector3I position, int seedOffset)
+        {
+            int hash = position.GetHashCode() ^ ChunkManager.Seed ^ seedOffset;
+            return Math.Abs(hash % 10000 / 10000f);
+        }
+
         public override string Generate(ref BlockGenInput input)
         {
-            FastNoiseLite Noise = new()
-            {
-                Seed = ChunkManager.Seed,
-                NoiseType = FastNoiseLite.NoiseTypeEnum.Value,
-                Frequency = 2.51f,
-                DomainWarpEnabled = true,
-                DomainWarpAmplitude = 5,
-            };
-
             string block = input.CurrentBlocks[input.IndexPosition.X, input.IndexPosition.Y, input.IndexPosition.Z];
             if (block == "base:air") return block;
 
-            var val = Noise.GetNoise3D(input.Position.X, input.Position.Y, input.Position.Z) * 10000;
-            var ores = ResourceManager.BlockOreRegistry.OrderBy((a) => a.Value.HashId % val);
-
+            var ores = ResourceManager.BlockOreRegistry.OrderBy((a) => a.Value.AmountPerChunk);
             foreach (var ore in ores)
             {
-                var threshold = ore.Value.ChancePerChunk;// / (ChunkSize * ChunkSize * ChunkSize);
-                if (Noise.GetNoise3D(input.Position.X, input.Position.Y, input.Position.Z) > 1 - threshold)
+                var threshold = ore.Value.AmountPerChunk / (ChunkSize * ChunkSize * ChunkSize);
+                if (GetSeededRandom(input.Position, ore.Value.HashId) < threshold)
                 {
                     block = ore.Value.FullId;
-                    // ! walk ore vein around, settings blocks
+
+                    var gSize = ore.Value.GroupSize;
+                    if (gSize < 2) break;
+
+                    var chance = 1f;
+                    var reduct = 1f / gSize;
+                    var rand = GetSeededRandom(input.Position + Vector3I.Left, ore.Value.HashId);
+                    var pos = Directions[(int)(rand * 6f)] + input.Position;
+                    var localPos = Directions[(int)(rand * 6f)] + input.IndexPosition;
+                    for (int i = 0; i < gSize; i++)
+                    {
+                        if (!localPos.IsInside(ChunkSize)) break;
+                        if (input.CurrentBlocks[localPos.X, localPos.Y, localPos.Z] == "base:air") break;
+                        if (GetSeededRandom(pos, ore.Value.HashId) > chance) break;
+
+                        chance -= reduct;
+                        input.CurrentBlocks[localPos.X, localPos.Y, localPos.Z] = block;
+                        rand = GetSeededRandom(pos, ore.Value.HashId + 11);
+                        pos = Directions[(int)(rand * 6f)] + pos;
+                        localPos = Directions[(int)(rand * 6f)] + localPos;
+                    }
+
+                    break;
                 }
             }
 
@@ -211,10 +216,4 @@ public partial class Chunk
             return block;
         }
     }
-
-    // public class BlockGenNoise
-    // {
-    //     [Export]
-    //     FastNoiseLite.NoiseTypeEnum NoiseType
-    // }
 }

@@ -42,6 +42,11 @@ public class Vector3B
         return new((sbyte)(v.X * other), (sbyte)(v.Y * other), (sbyte)(v.Z * other));
     }
 
+    public static Vector3I operator +(Vector3B v, Vector3I other)
+    {
+        return new(v.X + other.X, v.Y + other.Y, v.Z + other.Z);
+    }
+
     public static explicit operator Vector3(Vector3B v)
     {
         return new(v.X, v.Y, v.Z);

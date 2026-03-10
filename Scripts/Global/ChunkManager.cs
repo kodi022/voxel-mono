@@ -44,6 +44,8 @@ public partial class ChunkManager : Node
 				if (i >= chunksToSpawn.Count) break;
 
 				Vector3 chunkPos = chunksToSpawn[i];
+				if (GeneratingChunks.Contains(HashCode.Combine(chunkPos))) continue;
+
 				var regionPos = chunkPos.ToRegionPosition();
 				var regionPosHash = HashCode.Combine(regionPos);
 

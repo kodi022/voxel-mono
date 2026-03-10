@@ -57,9 +57,9 @@ public partial class Block : VoxelResource
 	[Export]
 	public bool Unbreakable { get; set; }
 	[Export]
-	public bool VulnerableLava { get; set; }
+	public bool InvulnerableLava { get; set; }
 	[Export]
-	public bool VulnerableBomb { get; set; }
+	public float BombResistance { get; set; }
 
 	[Export]
 	public Color ColorTint { get; set; } = Color.Color8(255, 255, 255);
@@ -79,12 +79,14 @@ public partial class Block : VoxelResource
 	public string EmissionTexturePath { get; set; }
 
 	[Export]
-	public Vector2 HpRange { get; set; } = new(10, 100);
+	public Vector2 HpRange { get; set; } = new(2, 4);
 
 	public float Hp = 0;
 
 	public void OnHit(DamageInfo info)
 	{
+		if (info.Damage * 100 < HpRange.Y) return;
+
 		if (Hp < info.Damage)
 		{
 			Hp = 0;

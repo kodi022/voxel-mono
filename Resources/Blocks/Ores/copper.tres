@@ -5,7 +5,8 @@
 
 [resource]
 script = ExtResource("1_6ejfr")
-GroupSize = 4
+GroupSize = 6
+AmountPerChunk = 2.0
 Name = "Copper"
 ColorTint = Color(0.7492795, 0.45178103, 0.16116658, 1)
 AlbedoTexture = ExtResource("1_tf3vp")

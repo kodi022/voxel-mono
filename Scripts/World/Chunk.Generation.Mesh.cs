@@ -31,12 +31,11 @@ public partial class Chunk
 
     private Rid meshInstance;
     private ArrayMesh meshInstanceData;
-    private int surfaceCount = 0;
-    private List<int> surfaceBlockIds = [];
-
     private Rid physicsMesh;
     private Rid physicsMeshShape;
-    private Godot.Collections.Dictionary<string, Variant> physicsMeshData;
+
+    private List<int> surfaceBlockIds;
+    private int surfaceCount = 0;
     private List<Vector3> physicsMeshFaces;
 
     public Task GenerateMeshData()
@@ -84,8 +83,8 @@ public partial class Chunk
 
         var fullRenderDistance = Player.RenderDistance * ChunkSize * Player.RenderDistance * ChunkSize;
         meshInstanceData = new();
-        physicsMeshFaces = [];
         surfaceBlockIds = [];
+        physicsMeshFaces = [];
         foreach (var blockSurfaceKVP in surfaces)
         {
             int faces = 0;
@@ -96,6 +95,7 @@ public partial class Chunk
             Godot.Collections.Dictionary lods = []; // (float, int[])   float is distance to use, int[] is indexes of the geometry
 
             // GD.Print($"--{WorldPosition}: {blockSurfaceKVP.Key}");
+
             foreach (var lodPosKVP in blockSurfaceKVP.Value)
             {
                 var blockSize = (sbyte)Mathf.Pow(2, lodPosKVP.Key);
@@ -141,6 +141,7 @@ public partial class Chunk
                 indices.AddRange(lodIndices);
                 var distance = fullRenderDistance / blockSize;
                 lods.Add((float)distance, lodIndices.ToArray());
+
                 // GD.Print($"-{lodPosKVP.Key}: {lodIndices.Count} ({lodIndices.First()})");
             }
 
@@ -195,6 +196,8 @@ public partial class Chunk
             surfaceIndex++;
         }
 
+        surfaceBlockIds = null;
+
         Visible = true;
     }
 
@@ -204,11 +207,12 @@ public partial class Chunk
             PhysicsServer3D.FreeRid(physicsMesh);
 
         if (surfaceCount == 0) return;
+        if (physicsMeshFaces is null || physicsMeshFaces.Count == 0) return;
 
         var transform = new Transform3D(Basis.Identity, WorldPosition);
         physicsMesh = PhysicsServer3D.BodyCreate();
         physicsMeshShape = PhysicsServer3D.ConcavePolygonShapeCreate();
-        physicsMeshData = new() { { "faces", physicsMeshFaces.ToArray() }, { "backface_collision", true } };
+        var physicsMeshData = new Godot.Collections.Dictionary<string, Variant>() { { "faces", physicsMeshFaces.ToArray() }, { "backface_collision", false } };
         PhysicsServer3D.ShapeSetData(physicsMeshShape, physicsMeshData);
         PhysicsServer3D.BodyAddShape(physicsMesh, physicsMeshShape);
         PhysicsServer3D.BodySetMode(physicsMesh, PhysicsServer3D.BodyMode.Static);

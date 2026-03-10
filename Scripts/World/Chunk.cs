@@ -41,8 +41,8 @@ public partial class Chunk
         if (meshInstance.IsValid)
             RenderingServer.FreeRid(meshInstance);
 
-        if (physicsMesh.IsValid)
-            PhysicsServer3D.FreeRid(physicsMesh);
+        // if (physicsMesh.IsValid)
+        //     PhysicsServer3D.FreeRid(physicsMesh);
 
         Visible = false;
     }

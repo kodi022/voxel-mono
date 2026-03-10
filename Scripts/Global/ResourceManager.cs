@@ -25,17 +25,26 @@ public partial class ResourceManager : Node
 	{
 		Dictionary<int, T> registry = [];
 
-		foreach (var file in ResourceLoader.ListDirectory(path))
+		void ListDirectory(string path)
 		{
-			if (file == "") continue;
-
-			var res = ResourceLoader.Load(path + file);
-			if (res is T resource)
+			foreach (var file in ResourceLoader.ListDirectory(path))
 			{
-				resource.BuildIds();
-				registry.Add(resource.HashId, resource);
+				if (file == "") continue;
+				if (file.EndsWith('/'))
+				{
+					ListDirectory(path + file);
+					continue;
+				}
+
+				var res = ResourceLoader.Load(path + file);
+				if (res is T resource)
+				{
+					resource.BuildIds();
+					registry.Add(resource.HashId, resource);
+				}
 			}
 		}
+		ListDirectory(path);
 
 		GD.Print($"{typeof(T).Name}Registry: {registry.Count} {typeof(T).Name}s");
 		return registry;
@@ -43,24 +52,33 @@ public partial class ResourceManager : Node
 
 	private static void RegisterBlocks(string path)
 	{
-		foreach (var file in ResourceLoader.ListDirectory(path))
+		static void ListDirectory(string path)
 		{
-			if (file == "") continue;
-
-			var resource = ResourceLoader.Load(path + file);
-			if (resource is Block b)
+			foreach (var file in ResourceLoader.ListDirectory(path))
 			{
-				b.BuildIds();
-
-				if (b.FullId == "base:air")
+				if (file == "") continue;
+				if (file.EndsWith('/'))
 				{
-					b.HashId = 0;
+					ListDirectory(path + file);
+					continue;
 				}
 
-				BlockRegistry.Add(b.HashId, b);
-				if (b is BlockOre bOre) BlockOreRegistry.Add(bOre.HashId, bOre);
+				var resource = ResourceLoader.Load(path + file);
+				if (resource is Block b)
+				{
+					b.BuildIds();
+
+					if (b.FullId == "base:air")
+					{
+						b.HashId = 0;
+					}
+
+					BlockRegistry.Add(b.HashId, b);
+					if (b is BlockOre bOre) BlockOreRegistry.Add(bOre.HashId, bOre);
+				}
 			}
 		}
+		ListDirectory(path);
 
 		GD.Print($"BlockRegistry: {BlockRegistry.Count} Blocks");
 	}

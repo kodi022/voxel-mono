@@ -78,7 +78,7 @@ public partial class Player : CharacterBody3D, IPawn
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _PhysicsProcess(double delta)
 	{
-		// ! if (WithinChunk is null) return;
+		if (WithinChunk is null || WithinChunk.Generating) return;
 
 		CurrentController.ControllerPhysicsProcess(delta, this);
 	}

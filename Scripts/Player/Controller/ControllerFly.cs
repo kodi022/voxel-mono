@@ -41,7 +41,17 @@ public class ControllerFly : Controller
                     Chunk.ChunkMineBlock(player.AimBlockPosition);
                     break;
                 case MouseButton.Right:
-                    if (player.FrameTraceResult.ContainsKey("position"))
+                    if (buttonEvent.CtrlPressed)
+                    {
+                        var action = new BlockActionArea()
+                        {
+                            Position = player.AimHitPosition,
+                            Radius = 20,
+                            Shape = BlockActionArea.ActionShape.Explosive,
+                        };
+                        action.Apply();
+                    }
+                    else
                     {
                         Chunk.ChunkPlaceBlock(player.AimBlockFrontPosition, "base:brick");
                     }

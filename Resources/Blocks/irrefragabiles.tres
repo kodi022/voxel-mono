@@ -7,6 +7,8 @@
 script = ExtResource("2_6ff8i")
 Name = "Irrefragabiles"
 Unbreakable = true
+InvulnerableLava = true
+BombResistance = 999999.0
 ColorTint = Color(0.1764706, 0.1764706, 0.1882353, 1)
 AlbedoTexture = ExtResource("1_a2j1l")
 HpRange = Vector2(0, 0)
