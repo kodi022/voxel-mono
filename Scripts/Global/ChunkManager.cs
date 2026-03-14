@@ -11,15 +11,18 @@ public partial class ChunkManager : Node
 
 	public static Dictionary<int, Region> Regions { get; private set; } = [];
 
-	// ! not removing properly
 	public static List<int> GeneratingChunks { get; private set; } = [];
 
 	private static readonly PackedScene sceneRegion = GD.Load<PackedScene>("res://Scenes/region.tscn");
 	private static Window root;
 
-	private static List<Vector3> chunksToSpawn = [];
+	private static List<ChunkVec3> chunksToSpawn = [];
 
-	// Called when the node enters the scene tree for the first time.
+	public override void _EnterTree()
+	{
+		ResourceManager.Ready();
+	}
+
 	public override void _Ready()
 	{
 		if (Seed > int.MaxValue - 10)
@@ -43,11 +46,11 @@ public partial class ChunkManager : Node
 			{
 				if (i >= chunksToSpawn.Count) break;
 
-				Vector3 chunkPos = chunksToSpawn[i];
-				if (GeneratingChunks.Contains(HashCode.Combine(chunkPos))) continue;
+				var chunkPos = chunksToSpawn[i];
+				if (GeneratingChunks.Contains(chunkPos.GetVecHash())) continue;
 
-				var regionPos = chunkPos.ToRegionPosition();
-				var regionPosHash = HashCode.Combine(regionPos);
+				var regionPos = (RegionVec3)chunkPos;
+				var regionPosHash = regionPos.GetVecHash();
 
 				if (Regions.TryGetValue(regionPosHash, out Region region))
 				{
@@ -56,7 +59,7 @@ public partial class ChunkManager : Node
 				else
 				{
 					region = (Region)sceneRegion.Instantiate();
-					region.Name = "region_" + chunkPos.ToRegionPosition();
+					region.RegionPosition = regionPos;
 					Regions.Add(regionPosHash, region);
 					root.CallDeferred(Node.MethodName.AddChild, region);
 				}
@@ -66,17 +69,17 @@ public partial class ChunkManager : Node
 		}
 	}
 
-	public static void SpawnChunk(Vector3 position)
+	public static void SpawnChunk(ChunkVec3 pos)
 	{
-		if (!chunksToSpawn.Contains(position))
+		if (!chunksToSpawn.Contains(pos))
 		{
-			chunksToSpawn.Add(position);
+			chunksToSpawn.Add(pos);
 		}
 	}
 
-	public static void SpawnChunks(List<Vector3> positions)
+	public static void SpawnChunks(List<ChunkVec3> poss)
 	{
-		foreach (var pos in positions)
+		foreach (var pos in poss)
 		{
 			if (!chunksToSpawn.Contains(pos))
 			{
@@ -85,43 +88,41 @@ public partial class ChunkManager : Node
 		}
 	}
 
-	public static void SpawnChunksOverride(List<Vector3> positions)
+	public static void SpawnChunksOverride(List<ChunkVec3> poss)
 	{
-		chunksToSpawn = positions;
+		chunksToSpawn = poss;
 	}
 
-	public static void DestroyChunk(Vector3 position)
+	public static void DestroyChunk(ChunkVec3 pos)
 	{
-		var regionPos = position.ToRegionPosition();
-		var regionPosHash = HashCode.Combine(regionPos);
+		var regionPosHash = ((RegionVec3)pos).GetVecHash();
 
 		if (Regions.TryGetValue(regionPosHash, out Region region))
 		{
-			region.ChunkDestroy(HashCode.Combine(position.ToChunkPosition()));
+			region.ChunkDestroy(pos.GetVecHash());
 		}
 	}
 
-	public static void DestroyChunks(List<Vector3> positions)
+	public static void DestroyChunks(List<ChunkVec3> poss)
 	{
-		foreach (var position in positions)
+		foreach (var pos in poss)
 		{
-			var regionPos = position.ToRegionPosition();
-			var regionPosHash = HashCode.Combine(regionPos);
+			var regionPosHash = ((RegionVec3)pos).GetVecHash();
 			if (Regions.TryGetValue(regionPosHash, out Region region))
 			{
-				region.ChunkDestroy(HashCode.Combine(position.ToChunkPosition()));
+				region.ChunkDestroy(pos.GetVecHash());
 			}
 		}
 	}
 
 	/// <summary> Finds Active chunks </summary>
-	public static Chunk FindChunk(Vector3 position)
+	public static Chunk FindChunk(ChunkVec3 pos)
 	{
-		var regionPos = position.ToRegionPosition();
+		var regionPos = (RegionVec3)pos;
 
-		if (Regions.TryGetValue(HashCode.Combine(regionPos), out Region region))
+		if (Regions.TryGetValue(regionPos.GetVecHash(), out Region region))
 		{
-			return region.ChunkGet(position);
+			return region.ChunkGet(pos);
 		}
 
 		return null;

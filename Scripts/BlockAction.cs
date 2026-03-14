@@ -4,7 +4,7 @@ using Voxel;
 
 public class BlockAction
 {
-    public Vector3 Position { get; set; } = Vector3.Zero;
+    public BlockVec3 Position { get; set; } = BlockVec3.Zero;
     public ActionType Action { get; set; } = ActionType.Mine;
     public Vector3 FaceNormal { get; set; } = Vector3.Zero;
 
@@ -16,7 +16,7 @@ public class BlockAction
 
     public virtual void Apply()
     {
-        var chunk = ChunkManager.FindChunk(Position);
+        var chunk = ChunkManager.FindChunk((ChunkVec3)Position);
 
         if (Action == ActionType.Mine)
         {
@@ -49,15 +49,15 @@ public class BlockActionArea : BlockAction
 
     public override void Apply()
     {
-        Dictionary<Vector3, List<Vector3>> changed = [];
+        Dictionary<ChunkVec3, List<BlockVec3>> changed = [];
 
-        bool CountBlock(Vector3 pos, FastNoiseLite explosiveNoise = null) => Shape switch
+        bool CountBlock(BlockVec3 pos, FastNoiseLite explosiveNoise = null) => Shape switch
         {
             ActionShape.Square => true,
             ActionShape.Circle => true,
             ActionShape.Cube => true,
-            ActionShape.Sphere => Position.DistanceSquaredTo(pos) < Radius * Radius,
-            ActionShape.Explosive => Position.DistanceSquaredTo(pos) < Radius * Radius - (explosiveNoise.GetNoise3D(pos.X, pos.Y, pos.Z) * Radius * 5),
+            ActionShape.Sphere => Position.ToVector3().DistanceSquaredTo(pos.ToVector3()) < Radius * Radius,
+            ActionShape.Explosive => Position.ToVector3().DistanceSquaredTo(pos.ToVector3()) < Radius * Radius - (explosiveNoise.GetNoise3D(pos.X, pos.Y, pos.Z) * Radius * 5),
             _ => true,
         };
 
@@ -75,7 +75,7 @@ public class BlockActionArea : BlockAction
                 for (int z = (int)-Radius; z < Radius; z++)
                 {
                     var currentPos = Position + new Vector3(x, y, z);
-                    var chunkPos = currentPos.ToChunkPosition();
+                    var chunkPos = (ChunkVec3)currentPos;
 
                     if (CountBlock(currentPos, noise))
                     {

@@ -12,12 +12,23 @@ public static class Global
 
         unchecked
         {
-            uint hash = 2166136261u;
+            int hash = 2116037303;
             foreach (var ch in s)
             {
-                hash = (hash ^ ch) * 16777619u;
+                hash = (hash ^ ch) * 971296439;
             }
-            return (int)hash;
+            return hash;
+        }
+    }
+
+    public static int StableHash(int x, int y, int z)
+    {
+        unchecked
+        {
+            int hash = x;
+            hash = hash * 2119412839 + y;
+            hash = hash * 135040691 + z;
+            return hash;
         }
     }
 

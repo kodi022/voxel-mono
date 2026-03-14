@@ -4,7 +4,7 @@ using Voxel.Resource;
 
 namespace Voxel;
 
-public partial class ResourceManager : Node
+public static class ResourceManager
 {
 	public static Dictionary<int, Block> BlockRegistry { get; private set; } = [];
 	public static Dictionary<int, BlockOre> BlockOreRegistry { get; private set; } = [];
@@ -12,11 +12,11 @@ public partial class ResourceManager : Node
 	public static Dictionary<int, Biome> BiomeRegistry { get; private set; } = [];
 	public static Dictionary<int, Structure> StructureRegistry { get; private set; } = [];
 
-	// Called when the node enters the scene tree for the first time.
-	public override void _Ready()
+	public static void Ready()
 	{
 		RegisterBlocks("res://Resources/Blocks/");
 
+		// ! combine dictionaries to be able to search multiple paths later
 		BiomeRegistry = RegisterGeneric<Biome>("res://Resources/Biomes/");
 		StructureRegistry = RegisterGeneric<Structure>("res://Resources/Structures/");
 	}
@@ -52,6 +52,9 @@ public partial class ResourceManager : Node
 
 	private static void RegisterBlocks(string path)
 	{
+		BlockRegistry = [];
+		BlockOreRegistry = [];
+
 		static void ListDirectory(string path)
 		{
 			foreach (var file in ResourceLoader.ListDirectory(path))

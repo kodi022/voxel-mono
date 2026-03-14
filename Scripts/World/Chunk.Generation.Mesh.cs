@@ -29,10 +29,16 @@ public partial class Chunk
 
     private static readonly Dictionary<int, OrmMaterial3D> blockMaterials = [];
 
+    public bool GeneratedMesh => meshInstance.IsValid;
+    public bool GeneratedPhysicsMesh => physicsMeshInstance.IsValid;
+
+    private int meshFaceCount = 0;
+    private int physicsMeshFaceCount = 0;
+
     private Rid meshInstance;
     private ArrayMesh meshInstanceData;
-    private Rid physicsMesh;
-    private Rid physicsMeshShape;
+    private Rid physicsMeshInstance;
+    private Rid physicsMeshInstanceShape;
 
     private List<int> surfaceBlockIds;
     private int surfaceCount = 0;
@@ -40,6 +46,12 @@ public partial class Chunk
 
     public Task GenerateMeshData()
     {
+        meshFaceCount = 0;
+        physicsMeshFaceCount = 0;
+        meshInstanceData = new();
+        surfaceBlockIds = [];
+        physicsMeshFaces = [];
+
         // < blockId, < lodId, positions > >
         Dictionary<int, Dictionary<int, List<Vector4I>>> surfaces = [];
 
@@ -82,9 +94,6 @@ public partial class Chunk
         if (surfaceCount == 0) return Task.CompletedTask;
 
         var fullRenderDistance = Player.RenderDistance * ChunkSize * Player.RenderDistance * ChunkSize;
-        meshInstanceData = new();
-        surfaceBlockIds = [];
-        physicsMeshFaces = [];
         foreach (var blockSurfaceKVP in surfaces)
         {
             int faces = 0;
@@ -109,7 +118,7 @@ public partial class Chunk
                     {
                         var off = FaceVertexOffsets[w][v] * blockSize;
                         meshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
-                        normals.Add((Vector3)Directions[w]);
+                        normals.Add(Directions[w]);
                         uvs.Add((Vector2)FaceUVs[v] * blockSize);
                     }
 
@@ -169,9 +178,9 @@ public partial class Chunk
         if (meshInstance.IsValid)
             RenderingServer.FreeRid(meshInstance);
 
-        if (surfaceCount == 0) return;
+        //if (surfaceCount == 0) return;
 
-        var transform = new Transform3D(Basis.Identity, WorldPosition);
+        var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
         meshInstance = RenderingServer.InstanceCreate();
         RenderingServer.InstanceSetBase(meshInstance, meshInstanceData.GetRid());
         RenderingServer.InstanceSetScenario(meshInstance, world3D.Scenario);
@@ -203,20 +212,20 @@ public partial class Chunk
 
     public void CreatePhysics()
     {
-        if (physicsMesh.IsValid)
-            PhysicsServer3D.FreeRid(physicsMesh);
+        if (physicsMeshInstance.IsValid)
+            PhysicsServer3D.FreeRid(physicsMeshInstance);
 
-        if (surfaceCount == 0) return;
-        if (physicsMeshFaces is null || physicsMeshFaces.Count == 0) return;
+        //if (surfaceCount == 0) return;
+        //if (physicsMeshFaces is null || physicsMeshFaces.Count == 0) return;
 
-        var transform = new Transform3D(Basis.Identity, WorldPosition);
-        physicsMesh = PhysicsServer3D.BodyCreate();
-        physicsMeshShape = PhysicsServer3D.ConcavePolygonShapeCreate();
+        var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
+        physicsMeshInstance = PhysicsServer3D.BodyCreate();
+        physicsMeshInstanceShape = PhysicsServer3D.ConcavePolygonShapeCreate();
         var physicsMeshData = new Godot.Collections.Dictionary<string, Variant>() { { "faces", physicsMeshFaces.ToArray() }, { "backface_collision", false } };
-        PhysicsServer3D.ShapeSetData(physicsMeshShape, physicsMeshData);
-        PhysicsServer3D.BodyAddShape(physicsMesh, physicsMeshShape);
-        PhysicsServer3D.BodySetMode(physicsMesh, PhysicsServer3D.BodyMode.Static);
-        PhysicsServer3D.BodySetState(physicsMesh, PhysicsServer3D.BodyState.Transform, transform);
-        PhysicsServer3D.BodySetSpace(physicsMesh, world3D.Space);
+        PhysicsServer3D.ShapeSetData(physicsMeshInstanceShape, physicsMeshData);
+        PhysicsServer3D.BodyAddShape(physicsMeshInstance, physicsMeshInstanceShape);
+        PhysicsServer3D.BodySetMode(physicsMeshInstance, PhysicsServer3D.BodyMode.Static);
+        PhysicsServer3D.BodySetState(physicsMeshInstance, PhysicsServer3D.BodyState.Transform, transform);
+        PhysicsServer3D.BodySetSpace(physicsMeshInstance, world3D.Space);
     }
 }

@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using Voxel;
 using Voxel.World;
 
@@ -92,7 +91,7 @@ public class ControllerWalk : Controller
                         {
                             var action = new BlockActionArea()
                             {
-                                Position = player.AimHitPosition,
+                                Position = BlockVec3.FromVector3(player.AimHitPosition),
                                 Radius = 20,
                                 Shape = BlockActionArea.ActionShape.Explosive,
                             };

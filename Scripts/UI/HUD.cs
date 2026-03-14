@@ -19,7 +19,7 @@ public partial class HUD : Panel
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _Process(double delta)
 	{
-		PositionLabel.Text = $"{Player.Self.GlobalPosition.ToBlockGlobalPosition()}";
+		PositionLabel.Text = $"{BlockVec3.FromVector3(Player.Self.GlobalPosition)}";
 		var block = Chunk.ChunkSelectBlock(Player.Self.AimBlockPosition);
 		if (block is not null)
 		{

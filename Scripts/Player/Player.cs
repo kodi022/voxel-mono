@@ -9,9 +9,9 @@ namespace Voxel;
 public partial class Player : CharacterBody3D, IPawn
 {
 	public static Player Self { get; private set; }
-	public static int RenderDistance { get; private set; } = 10;
+	public static int RenderDistance { get; private set; } = 12;
 	// physics generation (future npc / updates?)
-	public static int SimulationDistance { get; private set; } = 8;
+	public static int SimulationDistance { get; private set; } = 4;
 
 	[Export]
 	public CollisionShape3D CollisionShape3D { get; set; }
@@ -23,8 +23,8 @@ public partial class Player : CharacterBody3D, IPawn
 	// may be null
 	public Chunk WithinChunk { get; private set; }
 	public Vector3 AimHitPosition { get; private set; }
-	public Vector3 AimBlockPosition { get; private set; }
-	public Vector3 AimBlockFrontPosition { get; private set; }
+	public BlockVec3 AimBlockPosition { get; private set; }
+	public BlockVec3 AimBlockFrontPosition { get; private set; }
 
 	public Controller CurrentController { get; private set; } = new ControllerWalk();
 	public Input.MouseModeEnum MouseState { get; private set; } = Input.MouseModeEnum.Captured;
@@ -34,7 +34,9 @@ public partial class Player : CharacterBody3D, IPawn
 
 	public float Health { get; set; }
 
-	private bool processingRenderDistance = false;
+	private Task rendDisTask = null;
+	private List<ChunkVec3> chunkToSpawn = [];
+	private List<ChunkVec3> chunkToDestroy = [];
 	private Node debugUI;
 
 	// Called when the node enters the scene tree for the first time.
@@ -55,24 +57,41 @@ public partial class Player : CharacterBody3D, IPawn
 		FrameTraceResult = GetWorld3D().DirectSpaceState.IntersectRay(query);
 		if (FrameTraceResult.TryGetValue("position", out Variant position))
 		{
-			var pos = (Vector3)position;
-			AimHitPosition = pos;
-			AimBlockPosition = (pos - (Vector3)FrameTraceResult["normal"] * 0.5f).ToBlockGlobalPosition();
-			AimBlockFrontPosition = (pos + (Vector3)FrameTraceResult["normal"] * 0.5f).ToBlockGlobalPosition();
-			Selector.GlobalPosition = AimBlockPosition;
+			AimHitPosition = (Vector3)position;
+			AimBlockPosition = BlockVec3.FromVector3(AimHitPosition - (Vector3)FrameTraceResult["normal"] * 0.5f);
+			AimBlockFrontPosition = BlockVec3.FromVector3(AimHitPosition + (Vector3)FrameTraceResult["normal"] * 0.5f);
+			Selector.GlobalPosition = AimBlockPosition.ToVector3();
 		}
 		else
 		{
 			AimHitPosition = Vector3.Zero;
-			AimBlockPosition = Vector3.Zero;
-			Selector.GlobalPosition = Camera3D.GetForwardPosition(-10f);
+			AimBlockPosition = BlockVec3.Zero;
+			Selector.GlobalPosition = Camera3D.GetForwardPosition(-100f);
 		}
 
 		CurrentController.ControllerProcess(delta, this);
 
-		WithinChunk = ChunkManager.FindChunk(GlobalPosition);
+		WithinChunk = ChunkManager.FindChunk(ChunkVec3.FromVector3(GlobalPosition));
 
-		if (!processingRenderDistance) ProcessRenderDistance(GlobalPosition);
+		if (rendDisTask is not null)
+		{
+			if (rendDisTask.Status == TaskStatus.RanToCompletion || rendDisTask.Status == TaskStatus.Faulted)
+			{
+				rendDisTask = ProcessRenderDistance(GlobalPosition);
+				ChunkManager.SpawnChunksOverride(chunkToSpawn);
+				ChunkManager.DestroyChunks(chunkToDestroy);
+				chunkToSpawn = [];
+				chunkToDestroy = [];
+			}
+		}
+		else
+		{
+			rendDisTask = ProcessRenderDistance(GlobalPosition);
+			ChunkManager.SpawnChunksOverride(chunkToSpawn);
+			ChunkManager.DestroyChunks(chunkToDestroy);
+			chunkToSpawn = [];
+			chunkToDestroy = [];
+		}
 	}
 
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -126,10 +145,8 @@ public partial class Player : CharacterBody3D, IPawn
 					else CurrentController = new ControllerWalk();
 					break;
 				case Key.F3:
-
 					break;
 				case Key.F4:
-
 					break;
 				case Key.F5:
 					GlobalPosition = Vector3.Zero;
@@ -146,38 +163,37 @@ public partial class Player : CharacterBody3D, IPawn
 		}
 	}
 
-	private async void ProcessRenderDistance(Vector3 globalPosition)
+	private async Task ProcessRenderDistance(Vector3 globalPosition)
 	{
-		processingRenderDistance = true;
-
 		await Task.Run(async () =>
 		{
-			//chunkToSpawn.Add((-Vector3.One * 16, 0));
-			List<(Vector3 pos, float distSqr)> chunkToSpawn = [];
-			List<Vector3> chunkToDestroy = [];
-
+			chunkToSpawn = [];
+			chunkToDestroy = [];
+			List<(ChunkVec3 pos, float distSqr)> chunkToSpawnList = [];
 			var cullDistance = RenderDistance * Chunk.ChunkSize * RenderDistance * Chunk.ChunkSize;
 			var simDistance = SimulationDistance * Chunk.ChunkSize * SimulationDistance * Chunk.ChunkSize;
-			var offsetGlobalPosition = globalPosition - Vector3.One * (Chunk.ChunkSize * 0.5f);
-			for (int x = -RenderDistance - 6; x < RenderDistance + 6; x++)
+			var offsetGlobalPosition = globalPosition - (Vector3.One * Chunk.ChunkSize * 0.5f);
+			for (int x = -RenderDistance - 4; x < RenderDistance + 4; x++)
 			{
-				for (int y = -RenderDistance - 6; y < RenderDistance + 6; y++)
+				for (int y = -RenderDistance - 4; y < RenderDistance + 4; y++)
 				{
-					for (int z = -RenderDistance - 6; z < RenderDistance + 6; z++)
+					for (int z = -RenderDistance - 4; z < RenderDistance + 4; z++)
 					{
-						var pos = new Vector3(x * Chunk.ChunkSize, y * Chunk.ChunkSize, z * Chunk.ChunkSize);
-						var chunkPos = (offsetGlobalPosition + pos).ToChunkPosition();
-						var distSqr = (chunkPos - offsetGlobalPosition).LengthSquared();
+						var checkPos = new ChunkVec3(x, y, z).ToVector3Scaled();
+						var distSqr = checkPos.LengthSquared();
+						checkPos += offsetGlobalPosition;
+						var regionPos = RegionVec3.FromVector3(checkPos);
+						var regionHash = regionPos.GetVecHash();
+						var chunkPos = ChunkVec3.FromVector3(checkPos);
+						var chunkHash = chunkPos.GetVecHash();
 
 						if (distSqr < cullDistance)
 						{
-							var regionHash = HashCode.Combine(chunkPos.ToRegionPosition());
 							if (ChunkManager.Regions.TryGetValue(regionHash, out Region region))
 							{
-								var chunkPosHash = HashCode.Combine(chunkPos);
-								if (!region.Chunks.TryGetValue(chunkPosHash, out Chunk chunk))
+								if (!region.Chunks.TryGetValue(chunkHash, out Chunk chunk))
 								{
-									chunkToSpawn.Add((chunkPos, distSqr));
+									chunkToSpawnList.Add((chunkPos, distSqr));
 								}
 								else
 								{
@@ -195,15 +211,14 @@ public partial class Player : CharacterBody3D, IPawn
 							}
 							else
 							{
-								chunkToSpawn.Add((chunkPos, distSqr));
+								chunkToSpawnList.Add((chunkPos, distSqr));
 							}
 						}
 						else
 						{
-							var regionHash = HashCode.Combine(chunkPos.ToRegionPosition());
 							if (ChunkManager.Regions.TryGetValue(regionHash, out Region region))
 							{
-								if (region.Chunks.ContainsKey(HashCode.Combine(chunkPos)))
+								if (region.Chunks.ContainsKey(chunkHash))
 								{
 									chunkToDestroy.Add(chunkPos);
 								}
@@ -214,19 +229,14 @@ public partial class Player : CharacterBody3D, IPawn
 			}
 
 			// sort closest to furthest
-			chunkToSpawn.Sort((a, b) => a.distSqr.CompareTo(b.distSqr));
+			chunkToSpawnList.Sort((a, b) => a.distSqr.CompareTo(b.distSqr));
 
-			List<Vector3> a = [];
-			foreach (var (pos, distSqr) in chunkToSpawn)
+			foreach (var (pos, distSqr) in chunkToSpawnList)
 			{
-				a.Add(pos);
+				chunkToSpawn.Add(pos);
 			}
-			ChunkManager.SpawnChunksOverride(a);
-			ChunkManager.DestroyChunks(chunkToDestroy);
 
 			await Task.Delay(500);
 		});
-
-		processingRenderDistance = false;
 	}
 }

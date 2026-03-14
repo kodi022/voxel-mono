@@ -60,15 +60,9 @@ public partial class Chunk
                 {
                     for (sbyte y = 0; y < ChunkSize; y++)
                     {
-                        var pos = new Vector3I(x + (int)WorldPosition.X, y + (int)WorldPosition.Y, z + (int)WorldPosition.Z);
-                        var blockGenInput = new BlockGenInput() { Chunk = this, CurrentBlocks = tempBlocks, Position = pos, IndexPosition = new(x, y, z) };
+                        var pos = new Vector3(x, y, z) + ChunkPosition.ToVector3Scaled();
+                        var blockGenInput = new BlockGenInput() { Chunk = this, CurrentBlocks = tempBlocks, Position = BlockVec3.FromVector3(pos), IndexPosition = new(x, y, z) };
                         string blockId = layer.Generate(ref blockGenInput);
-
-                        // ! remove later
-                        if (new Vector2(pos.X, pos.Z).DistanceSquaredTo(new Vector2(-6f, -6f)) < 8f)
-                        {
-                            continue;
-                        }
 
                         tempBlocks[x, y, z] = blockId;
                     }
@@ -119,8 +113,8 @@ public partial class Chunk
     {
         public Chunk Chunk;
         public string[,,] CurrentBlocks;
-        public Vector3I Position;
-        public Vector3I IndexPosition;
+        public BlockVec3 Position;
+        public BlockVec3 IndexPosition;
     }
 
     public class BlockGenLayer
@@ -138,16 +132,26 @@ public partial class Chunk
         public override string Generate(ref BlockGenInput input)
         {
             var rand = 0f;
-            rand += input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Perlin, 0.0016f).GetNoise3Dv(input.Position);
-            rand += input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value, 0.0042563f).GetNoise3Dv(input.Position) * 0.2f;
-            rand += input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value, 0.025162f).GetNoise3Dv(input.Position) * 0.1f;
+            var noise = input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Perlin, 1f / 1187f);
+            rand += noise.GetNoise3Dv(input.Position.ToVector3());
+            noise = input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Perlin, 1f / 461f);
+            rand += noise.GetNoise3Dv(input.Position.ToVector3()) * 0.4f;
+            noise = input.Chunk.SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value, 1f / 59f);
+            rand += noise.GetNoise3Dv(input.Position.ToVector3()) * 0.2f;
 
             string block = "base:air";
-            var top = Mathf.Max(0, input.Position.Y * 0.1f);
-            if (rand > -0.1f + top)
+            var top = Mathf.Max(0, input.Position.Y * 0.01f);
+            if (rand > -0.2f + top)
             {
+                // spawn air sphere
                 if (new Vector3(input.Position.X, input.Position.Y, input.Position.Z).DistanceSquaredTo(new Vector3(-0.5f, -0.5f, -0.5f)) > 40f)
                     block = "base:stone";
+            }
+
+            // ! remove later
+            if (new Vector2(input.Position.X, input.Position.Z).DistanceSquaredTo(new Vector2(6f, 0f)) < 8f)
+            {
+                block = "base:air";
             }
 
             return block;
@@ -156,10 +160,10 @@ public partial class Chunk
 
     public class BlockGenLayerOre : BlockGenLayer
     {
-        private static float GetSeededRandom(Vector3I position, int seedOffset)
+        private static float GetSeededRandom(BlockVec3 position, int seedOffset)
         {
-            int hash = position.GetHashCode() ^ ChunkManager.Seed ^ seedOffset;
-            return Math.Abs(hash % 10000 / 10000f);
+            int hash = position.GetVecHash() ^ ChunkManager.Seed ^ seedOffset;
+            return Math.Abs(hash % 10000000 / 10000000f);
         }
 
         public override string Generate(ref BlockGenInput input)

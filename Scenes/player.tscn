@@ -50,6 +50,22 @@ fov = 80.0
 near = 0.1
 far = 10000.0
 
+[node name="Label2" type="Label" parent="." unique_id=926241446]
+offset_left = 994.0
+offset_top = 5.0
+offset_right = 1217.0
+offset_bottom = 58.0
+text = "F1- debug info    F2- fly/walk    F5- reset position    F6- debug render"
+label_settings = ExtResource("3_6t5aa")
+
+[node name="Label3" type="Label" parent="." unique_id=791231466]
+offset_left = 994.0
+offset_top = 24.0
+offset_right = 1350.0
+offset_bottom = 77.0
+text = "LMB- mine    RMB- place    CTRL+RMB- bomb"
+label_settings = ExtResource("3_6t5aa")
+
 [node name="Crosshair" type="Panel" parent="." unique_id=1373623817]
 anchors_preset = 8
 anchor_left = 0.5

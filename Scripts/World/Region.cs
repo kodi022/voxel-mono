@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Voxel.Resource;
@@ -8,7 +7,9 @@ namespace Voxel.World;
 
 public partial class Region : Node3D
 {
-	public Vector3 WorldPosition;
+	public RegionVec3 RegionPosition { get; internal set; }
+	public int RegionPositionHash { get; private set; }
+
 	public List<Structure> Structures;
 	public Dictionary<int, Chunk> Chunks { get; private set; } = [];
 	//public Dictionary<int, int> ModifiedBlocks;
@@ -19,18 +20,18 @@ public partial class Region : Node3D
 	public override void _Ready()
 	{
 		ready = true;
+		Name = "region_" + RegionPosition;
+		RegionPositionHash = RegionPosition.GetVecHash();
 	}
 
-	public void ChunkCreate(Vector3 position)
+	public void ChunkCreate(ChunkVec3 pos)
 	{
 		if (!ready) return;
 
-		position = position.ToChunkPosition();
-		var posHash = HashCode.Combine(position);
-
+		var posHash = pos.GetVecHash();
 		if (!Chunks.ContainsKey(posHash))
 		{
-			var chunk = new Chunk(this, position);
+			var chunk = new Chunk(this, pos);
 			Chunks.Add(posHash, chunk);
 		}
 	}
@@ -47,13 +48,11 @@ public partial class Region : Node3D
 		return null;
 	}
 
-	public Chunk ChunkGet(Vector3 position)
+	public Chunk ChunkGet(ChunkVec3 pos)
 	{
 		if (!ready) return null;
 
-		position = position.ToChunkPosition();
-
-		if (Chunks.TryGetValue(HashCode.Combine(position), out Chunk chunk))
+		if (Chunks.TryGetValue(pos.GetVecHash(), out Chunk chunk))
 		{
 			return chunk;
 		}
@@ -67,9 +66,15 @@ public partial class Region : Node3D
 		{
 			if (chunk is not null)
 			{
-				ChunkManager.GeneratingChunks.Remove(chunk.PositionHash);
+				ChunkManager.GeneratingChunks.Remove(chunk.ChunkPositionHash);
 				Chunks[posHash] = null;
 				Chunks.Remove(posHash);
+			}
+
+			if (Chunks.Count == 0)
+			{
+				ChunkManager.Regions.Remove(RegionPositionHash);
+				QueueFree();
 			}
 		}
 	}
@@ -77,25 +82,27 @@ public partial class Region : Node3D
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkGenerate(Chunk chunk)
 	{
+		await Task.Delay(1);
 		chunk.Generating = true;
-		ChunkManager.GeneratingChunks.Add(chunk.PositionHash);
+		ChunkManager.GeneratingChunks.Add(chunk.ChunkPositionHash);
 
 		await Task.Run(async () =>
 		{
 			await chunk.GenerateBlockData();
 			await chunk.GenerateMeshData();
-			CallDeferred(nameof(ChunkFinish), chunk.PositionHash);
+			CallDeferred(nameof(ChunkFinish), chunk.ChunkPositionHash);
 		});
 	}
 
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkUpdate(Chunk chunk)
 	{
+		await Task.Delay(1);
 		chunk.Generating = true;
 		await Task.Run(async () =>
 		{
 			await chunk.GenerateMeshData();
-			CallDeferred(nameof(ChunkFinish), chunk.PositionHash);
+			CallDeferred(nameof(ChunkFinish), chunk.ChunkPositionHash);
 		});
 	}
 
@@ -104,12 +111,12 @@ public partial class Region : Node3D
 	{
 		var chunk = ChunkGet(chunkPosHash);
 		if (chunk is null) return;
-
 		chunk.CreateMesh();
-		if (chunk.Simulating) chunk.CreatePhysics();
+
+		chunk.CreatePhysics();
 
 		chunk.Generating = false;
 
-		ChunkManager.GeneratingChunks.Remove(chunk.PositionHash);
+		ChunkManager.GeneratingChunks.Remove(chunk.ChunkPositionHash);
 	}
 }

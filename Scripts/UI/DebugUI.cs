@@ -19,15 +19,17 @@ public partial class DebugUI : Node
 
     public override void _Process(double delta)
     {
-        labels[0].Text = $"FPS:{Engine.GetFramesPerSecond(),6:0.0}";
+        labels[0].Text = $"FPS: {Engine.GetFramesPerSecond(),6:0.0}";
 
         if (DebugUIMode > 0)
         {
             Engine.MaxFps = 0;
             ProjectSettings.SetSetting("display/window/vsync/vsync_mode", false);
 
-            var blockPos = Player.Self.GlobalPosition.ToBlockGlobalPosition();
-            labels[1].Text = $"POS: X:{blockPos.X,5} Y:{blockPos.Y,5} Z:{blockPos.Z,5}";
+            var blockPos = BlockVec3.FromVector3(Player.Self.GlobalPosition);
+            var chunkPos = ChunkVec3.FromVector3(Player.Self.GlobalPosition);
+            labels[1].Text = $"bPOS: {blockPos.X,4} {blockPos.Y,4} {blockPos.Z,4}";
+            labels[2].Text = $"cPOS: {chunkPos.X,4} {chunkPos.Y,4} {chunkPos.Z,4}";
 
             int nonAirBlock = 0, nullBlock = 0;
             int chunks = 0;
@@ -36,17 +38,18 @@ public partial class DebugUI : Node
                 foreach (var block in Player.Self.WithinChunk.Blocks)
                 {
                     if (block is null) { nullBlock++; continue; }
-                    if (block != 0) nonAirBlock++;
+                    if (block == 0) nonAirBlock++;
                 }
-            }
 
-            foreach (var region in ChunkManager.Regions)
-            {
-                chunks += region.Value.Chunks.Count;
-            }
+                foreach (var region in ChunkManager.Regions)
+                {
+                    chunks += region.Value.Chunks.Count;
+                }
 
-            labels[2].Text = $"CHUNK: !a{nonAirBlock} n{nullBlock}";
-            labels[3].Text = $"CHUNKS: {chunks} g{ChunkManager.GeneratingChunks.Count}";
+                labels[3].Text = $"CHUNK: a{nonAirBlock} n{nullBlock}";
+                labels[4].Text = $"CHUNK: mesh:{Player.Self.WithinChunk.GeneratedMesh} pMesh:{Player.Self.WithinChunk.GeneratedPhysicsMesh}";
+                labels[5].Text = $"CHUNKS: {chunks} g{ChunkManager.GeneratingChunks.Count}";
+            }
         }
     }
 }

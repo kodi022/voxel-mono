@@ -107,7 +107,7 @@ public partial class Block : VoxelResource
 	// OnBreak (add export with choice on what block to replace, default air 0)
 	// OnLavaConsume (lava tries to consume)
 
-	// required for operators
+	// required for == and =! operators
 	public override bool Equals(object obj)
 	{
 		if (ReferenceEquals(this, obj))
@@ -118,10 +118,10 @@ public partial class Block : VoxelResource
 		return false;
 	}
 
-	// required for operators
+	// required for == and =! operators
 	public override int GetHashCode()
 	{
-		return HashId;
+		return base.GetHashCode();
 	}
 }
 

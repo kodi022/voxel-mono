@@ -7,12 +7,13 @@ namespace Voxel.World;
 public partial class Chunk
 {
     public const int ChunkSize = 16;
+    public static readonly int RegionSize = ChunkSize * ChunkSize;
 
     public int[,,] BlockBiome { get; set; }
     public Block[,,] Blocks { get; set; }
 
-    public readonly Vector3 WorldPosition;
-    public readonly int PositionHash;
+    public readonly ChunkVec3 ChunkPosition;
+    public readonly int ChunkPositionHash;
 
     public bool Visible { get; private set; } = false;
     public bool Simulating { get; private set; } = false;
@@ -24,103 +25,101 @@ public partial class Chunk
 
     // * enabling / disabling
 
-    public Chunk(Region region, Vector3 worldPosition)
+    public Chunk(Region region, ChunkVec3 worldPosition)
     {
         this.region = region;
         world3D = region.GetWorld3D();
         Blocks ??= new Block[ChunkSize, ChunkSize, ChunkSize];
 
-        WorldPosition = worldPosition;
-        PositionHash = HashCode.Combine(WorldPosition);
+        ChunkPosition = worldPosition;
+        ChunkPositionHash = ChunkPosition.GetVecHash();
 
         region.ChunkGenerate(this);
     }
 
     ~Chunk()
     {
-        if (meshInstance.IsValid)
+        if (GeneratedMesh)
             RenderingServer.FreeRid(meshInstance);
 
-        // if (physicsMesh.IsValid)
-        //     PhysicsServer3D.FreeRid(physicsMesh);
+        if (GeneratedPhysicsMesh)
+            PhysicsServer3D.FreeRid(physicsMeshInstance);
 
         Visible = false;
     }
 
     public void EnableSimulation()
     {
-        CreatePhysics();
+        // CreatePhysics();
         Simulating = true;
     }
 
     public void DisableSimulation()
     {
-        //if (physicsMesh.IsValid)
-        //    PhysicsServer3D.FreeRid(physicsMesh);
+        // if (GeneratedPhysicsMesh)
+        //     PhysicsServer3D.FreeRid(physicsMeshInstance);
 
         Simulating = false;
     }
 
     // * modifying blocks
 
-    public static void ChunkMineBlock(in Vector3 position)
+    public static void ChunkMineBlock(in BlockVec3 pos)
     {
-        var chunk = ChunkManager.FindChunk(position);
-        chunk?.SetBlock(position, "base:air");
+        var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
+        chunk?.SetBlock(pos, "base:air");
     }
 
-    public static void ChunkPlaceBlock(in Vector3 position, in string blockId)
+    public static void ChunkPlaceBlock(in BlockVec3 pos, in string blockId)
     {
-        var chunk = ChunkManager.FindChunk(position);
-        chunk?.SetBlock(position, blockId);
+        var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
+        chunk?.SetBlock(pos, blockId);
     }
 
-    public static Block ChunkSelectBlock(in Vector3 position)
+    public static Block ChunkSelectBlock(in BlockVec3 pos)
     {
-        var chunk = ChunkManager.FindChunk(position);
-        return chunk?.GetBlock(position);
+        var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
+        return chunk?.GetBlock(pos);
     }
 
-    public void SetBlocks(in Vector3[] positions, in string blockId)
+    public void SetBlocks(in BlockVec3[] poss, in string blockId)
     {
         bool change = false;
-        foreach (var pos in positions)
+        foreach (var pos in poss)
         {
-            var bPos = pos.ToBlockLocalPosition(WorldPosition);
-            if (!bPos.IsInside(ChunkSize)) return;
+            var locPos = pos.ToLocal(ChunkPosition);
+            if (!locPos.IsInside(ChunkSize)) return;
 
-            Blocks[(int)bPos.X, (int)bPos.Y, (int)bPos.Z] = (Block)blockId;
+            Blocks[locPos.X, locPos.Y, locPos.Z] = (Block)blockId;
             change = true;
         }
 
         if (change) region.ChunkUpdate(this);
     }
 
-    public void SetBlock(in Vector3 position, in string blockId)
+    public void SetBlock(BlockVec3 pos, in string blockId)
     {
-        var pos = position.ToBlockLocalPosition(WorldPosition);
+        pos = pos.ToLocal(ChunkPosition);
         if (!pos.IsInside(ChunkSize)) return;
-
-        bool change = Blocks[(int)pos.X, (int)pos.Y, (int)pos.Z] != blockId;
-        Blocks[(int)pos.X, (int)pos.Y, (int)pos.Z] = (Block)blockId;
+        bool change = Blocks[pos.X, pos.Y, pos.Z] != blockId;
+        Blocks[pos.X, pos.Y, pos.Z] = (Block)blockId;
         if (change) region.ChunkUpdate(this);
     }
 
-    public Block GetBlock(in Vector3 position)
+    public Block GetBlock(BlockVec3 pos)
     {
-        var pos = position.ToBlockLocalPosition(WorldPosition);
+        pos = pos.ToLocal(ChunkPosition);
         if (!pos.IsInside(ChunkSize)) return (Block)"block:air";
-
-        return Blocks[(int)pos.X, (int)pos.Y, (int)pos.Z];
+        return Blocks[pos.X, pos.Y, pos.Z];
     }
 
     // no api for threading
-    public Block GetBlock(in Vector3 position, in Vector3 globalPosition)
+    public Block GetBlock(BlockVec3 pos, in ChunkVec3 globalPosition)
     {
-        var pos = position.ToBlockLocalPosition(globalPosition);
+        pos = pos.ToLocal(globalPosition);
         if (!pos.IsInside(ChunkSize)) return (Block)"block:air";
 
-        return Blocks[(int)pos.X, (int)pos.Y, (int)pos.Z];
+        return Blocks[pos.X, pos.Y, pos.Z];
     }
 
     private static Texture2D LoadTextureFromBlock(Texture2D resourceTexture, string resourceTexturePath)
