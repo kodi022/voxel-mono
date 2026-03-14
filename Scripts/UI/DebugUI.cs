@@ -28,8 +28,10 @@ public partial class DebugUI : Node
 
             var blockPos = BlockVec3.FromVector3(Player.Self.GlobalPosition);
             var chunkPos = ChunkVec3.FromVector3(Player.Self.GlobalPosition);
+            var regionPos = RegionVec3.FromVector3(Player.Self.GlobalPosition);
             labels[1].Text = $"bPOS: {blockPos.X,4} {blockPos.Y,4} {blockPos.Z,4}";
             labels[2].Text = $"cPOS: {chunkPos.X,4} {chunkPos.Y,4} {chunkPos.Z,4}";
+            labels[3].Text = $"rPOS: {regionPos.X,4} {regionPos.Y,4} {regionPos.Z,4}";
 
             int nonAirBlock = 0, nullBlock = 0;
             int chunks = 0;
@@ -46,9 +48,9 @@ public partial class DebugUI : Node
                     chunks += region.Value.Chunks.Count;
                 }
 
-                labels[3].Text = $"CHUNK: a{nonAirBlock} n{nullBlock}";
-                labels[4].Text = $"CHUNK: mesh:{Player.Self.WithinChunk.GeneratedMesh} pMesh:{Player.Self.WithinChunk.GeneratedPhysicsMesh}";
-                labels[5].Text = $"CHUNKS: {chunks} g{ChunkManager.GeneratingChunks.Count}";
+                labels[4].Text = $"CHUNK: a{nonAirBlock} n{nullBlock}";
+                labels[5].Text = $"CHUNK: mesh:{Player.Self.WithinChunk.GeneratedMesh} pMesh:{Player.Self.WithinChunk.GeneratedPhysicsMesh}";
+                labels[6].Text = $"CHUNKS: {chunks} g{ChunkManager.GeneratingChunks.Count}";
             }
         }
     }

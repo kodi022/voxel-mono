@@ -9,7 +9,7 @@ namespace Voxel;
 public partial class Player : CharacterBody3D, IPawn
 {
 	public static Player Self { get; private set; }
-	public static int RenderDistance { get; private set; } = 12;
+	public static int RenderDistance { get; private set; } = 10;
 	// physics generation (future npc / updates?)
 	public static int SimulationDistance { get; private set; } = 4;
 
@@ -158,6 +158,9 @@ public partial class Player : CharacterBody3D, IPawn
 					if (viewport.DebugDraw == Viewport.DebugDrawEnum.Disabled) viewport.DebugDraw = Viewport.DebugDrawEnum.Wireframe;
 					else if (viewport.DebugDraw == Viewport.DebugDrawEnum.Wireframe) viewport.DebugDraw = Viewport.DebugDrawEnum.DisableLod;
 					else viewport.DebugDraw = Viewport.DebugDrawEnum.Disabled;
+					break;
+				case Key.F10:
+					ChunkManager.CloseGame();
 					break;
 			}
 		}

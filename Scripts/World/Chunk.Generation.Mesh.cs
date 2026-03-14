@@ -32,9 +32,6 @@ public partial class Chunk
     public bool GeneratedMesh => meshInstance.IsValid;
     public bool GeneratedPhysicsMesh => physicsMeshInstance.IsValid;
 
-    private int meshFaceCount = 0;
-    private int physicsMeshFaceCount = 0;
-
     private Rid meshInstance;
     private ArrayMesh meshInstanceData;
     private Rid physicsMeshInstance;
@@ -46,8 +43,6 @@ public partial class Chunk
 
     public Task GenerateMeshData()
     {
-        meshFaceCount = 0;
-        physicsMeshFaceCount = 0;
         meshInstanceData = new();
         surfaceBlockIds = [];
         physicsMeshFaces = [];
@@ -178,8 +173,7 @@ public partial class Chunk
         if (meshInstance.IsValid)
             RenderingServer.FreeRid(meshInstance);
 
-        //if (surfaceCount == 0) return;
-
+        if (Generating) return;
         var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
         meshInstance = RenderingServer.InstanceCreate();
         RenderingServer.InstanceSetBase(meshInstance, meshInstanceData.GetRid());
@@ -187,6 +181,7 @@ public partial class Chunk
         RenderingServer.InstanceSetTransform(meshInstance, transform);
         RenderingServer.InstanceGeometrySetLodBias(meshInstance, -1f);
 
+        if (Generating) return;
         int surfaceIndex = 0;
         foreach (var id in surfaceBlockIds)
         {
@@ -215,9 +210,7 @@ public partial class Chunk
         if (physicsMeshInstance.IsValid)
             PhysicsServer3D.FreeRid(physicsMeshInstance);
 
-        //if (surfaceCount == 0) return;
-        //if (physicsMeshFaces is null || physicsMeshFaces.Count == 0) return;
-
+        if (Generating) return;
         var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
         physicsMeshInstance = PhysicsServer3D.BodyCreate();
         physicsMeshInstanceShape = PhysicsServer3D.ConcavePolygonShapeCreate();
@@ -227,5 +220,12 @@ public partial class Chunk
         PhysicsServer3D.BodySetMode(physicsMeshInstance, PhysicsServer3D.BodyMode.Static);
         PhysicsServer3D.BodySetState(physicsMeshInstance, PhysicsServer3D.BodyState.Transform, transform);
         PhysicsServer3D.BodySetSpace(physicsMeshInstance, world3D.Space);
+    }
+
+    private static Texture2D LoadTextureFromBlock(Texture2D resourceTexture, string resourceTexturePath)
+    {
+        if (resourceTexture is not null) return resourceTexture;
+        if (!string.IsNullOrEmpty(resourceTexturePath)) return GD.Load<Texture2D>(resourceTexturePath);
+        return MissingTexture;
     }
 }

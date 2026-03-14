@@ -10,7 +10,7 @@ public partial class Chunk
     public static readonly int RegionSize = ChunkSize * ChunkSize;
 
     public int[,,] BlockBiome { get; set; }
-    public Block[,,] Blocks { get; set; }
+    public BlockInstance[,,] Blocks { get; set; }
 
     public readonly ChunkVec3 ChunkPosition;
     public readonly int ChunkPositionHash;
@@ -29,7 +29,7 @@ public partial class Chunk
     {
         this.region = region;
         world3D = region.GetWorld3D();
-        Blocks ??= new Block[ChunkSize, ChunkSize, ChunkSize];
+        Blocks ??= new BlockInstance[ChunkSize, ChunkSize, ChunkSize];
 
         ChunkPosition = worldPosition;
         ChunkPositionHash = ChunkPosition.GetVecHash();
@@ -37,7 +37,7 @@ public partial class Chunk
         region.ChunkGenerate(this);
     }
 
-    ~Chunk()
+    public void FreeMeshes()
     {
         if (GeneratedMesh)
             RenderingServer.FreeRid(meshInstance);
@@ -76,7 +76,7 @@ public partial class Chunk
         chunk?.SetBlock(pos, blockId);
     }
 
-    public static Block ChunkSelectBlock(in BlockVec3 pos)
+    public static BlockInstance ChunkSelectBlock(in BlockVec3 pos)
     {
         var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
         return chunk?.GetBlock(pos);
@@ -88,9 +88,13 @@ public partial class Chunk
         foreach (var pos in poss)
         {
             var locPos = pos.ToLocal(ChunkPosition);
-            if (!locPos.IsInside(ChunkSize)) return;
+            if (!locPos.IsInside(ChunkSize)) continue;
 
-            Blocks[locPos.X, locPos.Y, locPos.Z] = (Block)blockId;
+            var block = Blocks[locPos.X, locPos.Y, locPos.Z];
+            if (blockId == "base:air") if (block.IsAir || block.Unbreakable) continue;
+            else if (block.Unbreakable) continue;
+
+            Blocks[locPos.X, locPos.Y, locPos.Z] = (BlockInstance)blockId;
             change = true;
         }
 
@@ -101,31 +105,38 @@ public partial class Chunk
     {
         pos = pos.ToLocal(ChunkPosition);
         if (!pos.IsInside(ChunkSize)) return;
-        bool change = Blocks[pos.X, pos.Y, pos.Z] != blockId;
-        Blocks[pos.X, pos.Y, pos.Z] = (Block)blockId;
-        if (change) region.ChunkUpdate(this);
+
+        var block = Blocks[pos.X, pos.Y, pos.Z];
+        if (blockId == "base:air") if (block.IsAir || block.Unbreakable) return;
+        else if (block.Unbreakable) return;
+
+        if (block != blockId)
+        {
+            Blocks[pos.X, pos.Y, pos.Z] = (BlockInstance)blockId;
+            region.ChunkUpdate(this);
+        }
     }
 
-    public Block GetBlock(BlockVec3 pos)
+    public BlockInstance GetBlock(BlockVec3 pos)
     {
+        if (Blocks is null) return null;
+
         pos = pos.ToLocal(ChunkPosition);
-        if (!pos.IsInside(ChunkSize)) return (Block)"block:air";
+        if (!pos.IsInside(ChunkSize)) return null;
+
+        var block = Blocks[pos.X, pos.Y, pos.Z];
+        if (block is null) return null;
+        if (block.IsAir || block.Unbreakable) return null;
+
         return Blocks[pos.X, pos.Y, pos.Z];
     }
 
     // no api for threading
-    public Block GetBlock(BlockVec3 pos, in ChunkVec3 globalPosition)
-    {
-        pos = pos.ToLocal(globalPosition);
-        if (!pos.IsInside(ChunkSize)) return (Block)"block:air";
+    // public Block GetBlock(BlockVec3 pos, in ChunkVec3 globalPosition)
+    // {
+    //     pos = pos.ToLocal(globalPosition);
+    //     if (!pos.IsInside(ChunkSize)) return (Block)"block:air";
 
-        return Blocks[pos.X, pos.Y, pos.Z];
-    }
-
-    private static Texture2D LoadTextureFromBlock(Texture2D resourceTexture, string resourceTexturePath)
-    {
-        if (resourceTexture is not null) return resourceTexture;
-        if (!string.IsNullOrEmpty(resourceTexturePath)) return GD.Load<Texture2D>(resourceTexturePath);
-        return MissingTexture;
-    }
+    //     return Blocks[pos.X, pos.Y, pos.Z];
+    // }
 }

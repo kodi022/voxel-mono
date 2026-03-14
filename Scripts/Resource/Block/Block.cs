@@ -2,6 +2,47 @@ using Godot;
 
 namespace Voxel.Resource;
 
+// only necessary info for chunks
+public class BlockInstance
+{
+	public int HashId { get; set; }
+
+	public string Name { get; set; }
+	public Block.BlockDirections DirectionSupport { get; set; }
+	public bool IsAir { get; set; }
+	public bool Unbreakable { get; set; }
+	public bool InvulnerableLava { get; set; }
+	public float BombResistance { get; set; }
+
+	public Vector2 HpRange { get; set; }
+
+	public float Hp;
+
+	public static bool operator ==(BlockInstance self, int hashId) => self.HashId == hashId;
+	public static bool operator !=(BlockInstance self, int hashId) => self.HashId != hashId;
+	public static bool operator ==(BlockInstance self, string blockId) => self.HashId == ResourceManager.GetBlock(blockId).HashId;
+	public static bool operator !=(BlockInstance self, string blockId) => self.HashId != ResourceManager.GetBlock(blockId).HashId;
+	public static bool operator ==(BlockInstance left, BlockInstance right) => left.HashId == right.HashId;
+	public static bool operator !=(BlockInstance left, BlockInstance right) => left.HashId != right.HashId;
+
+	public static explicit operator BlockInstance(string blockId)
+	{
+		return ResourceManager.GetBlockInstance(blockId);
+	}
+
+	// required for == and =! operators
+	public override bool Equals(object obj)
+	{
+		return false;
+	}
+
+	// required for == and =! operators
+	public override int GetHashCode()
+	{
+		return base.GetHashCode();
+	}
+}
+
 [GlobalClass]
 public partial class Block : VoxelResource
 {
@@ -13,47 +54,21 @@ public partial class Block : VoxelResource
 		HorizonalAndVertical,
 	}
 
-	public static bool operator ==(Block self, int hashId)
-	{
-		return self.HashId == hashId;
-	}
-
-	public static bool operator !=(Block self, int hashId)
-	{
-		return self.HashId != hashId;
-	}
-
-	public static bool operator ==(Block self, string blockId)
-	{
-		return self.HashId == ResourceManager.GetBlock(blockId).HashId;
-	}
-
-	public static bool operator !=(Block self, string blockId)
-	{
-		return self.HashId != ResourceManager.GetBlock(blockId).HashId;
-	}
-
-	public static bool operator ==(Block left, Block right)
-	{
-		return left.HashId == right.HashId;
-	}
-
-	public static bool operator !=(Block left, Block right)
-	{
-		return left.HashId != right.HashId;
-	}
-
-	public static explicit operator Block(string blockId)
-	{
-		return ResourceManager.GetBlock(blockId);
-	}
+	public static bool operator ==(Block self, int hashId) => self.HashId == hashId;
+	public static bool operator !=(Block self, int hashId) => self.HashId != hashId;
+	public static bool operator ==(Block self, string blockId) => self.HashId == ResourceManager.GetBlock(blockId).HashId;
+	public static bool operator !=(Block self, string blockId) => self.HashId != ResourceManager.GetBlock(blockId).HashId;
+	public static bool operator ==(Block left, Block right) => left.HashId == right.HashId;
+	public static bool operator !=(Block left, Block right) => left.HashId != right.HashId;
+	public static bool operator ==(Block left, BlockInstance right) => left.HashId == right.HashId;
+	public static bool operator !=(Block left, BlockInstance right) => left.HashId != right.HashId;
 
 	[Export]
 	public string Name { get; set; } = "";
 	[Export]
-	public bool IsAir { get; set; } = false;
-	[Export]
 	public BlockDirections DirectionSupport { get; set; } = BlockDirections.None;
+	[Export]
+	public bool IsAir { get; set; } = false;
 	[Export]
 	public bool Unbreakable { get; set; }
 	[Export]
@@ -81,31 +96,44 @@ public partial class Block : VoxelResource
 	[Export]
 	public Vector2 HpRange { get; set; } = new(2, 4);
 
-	public float Hp = 0;
+	// OnBreak (add export with choice on what block to replace, default air 0)
+	// OnLavaConsume (lava tries to consume)
 
-	public void OnHit(DamageInfo info)
+	public static void OnHit(DamageInfo info)
 	{
-		if (info.Damage * 100 < HpRange.Y) return;
+		if (info.Damage * 100 < info.BlockInstance.HpRange.Y) return;
 
-		if (Hp < info.Damage)
+		if (info.BlockInstance.Hp < info.Damage)
 		{
-			Hp = 0;
-			OnBreak();
+			info.BlockInstance.Hp = 0;
+			OnBreak(info);
 			return;
 		}
 		// particle
 		// block damage overlay?
 	}
 
-	public void OnBreak()
+	public static void OnBreak(DamageInfo info)
 	{
 		// send different block back to chunk? (allow other than air)
 
 		// particle
 	}
 
-	// OnBreak (add export with choice on what block to replace, default air 0)
-	// OnLavaConsume (lava tries to consume)
+	public BlockInstance MakeInstance()
+	{
+		return new BlockInstance()
+		{
+			HashId = HashId,
+			Name = Name,
+			DirectionSupport = DirectionSupport,
+			IsAir = IsAir,
+			Unbreakable = Unbreakable,
+			InvulnerableLava = InvulnerableLava,
+			BombResistance = BombResistance,
+			HpRange = HpRange
+		};
+	}
 
 	// required for == and =! operators
 	public override bool Equals(object obj)
@@ -125,7 +153,6 @@ public partial class Block : VoxelResource
 	}
 }
 
-
 public struct DamageInfo
 {
 	// using temporary types until proper types are implemented
@@ -134,4 +161,5 @@ public struct DamageInfo
 	public string Tool;
 	public Vector3 HitPosition;
 	public Vector3 FaceNormal;
+	public BlockInstance BlockInstance;
 }

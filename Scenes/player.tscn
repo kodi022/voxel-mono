@@ -55,7 +55,7 @@ offset_left = 994.0
 offset_top = 5.0
 offset_right = 1217.0
 offset_bottom = 58.0
-text = "F1- debug info    F2- fly/walk    F5- reset position    F6- debug render"
+text = "F1- debug info    F2- fly/walk    F5- reset position    F6- debug render    F10- close game"
 label_settings = ExtResource("3_6t5aa")
 
 [node name="Label3" type="Label" parent="." unique_id=791231466]

@@ -67,6 +67,7 @@ public partial class Region : Node3D
 			if (chunk is not null)
 			{
 				ChunkManager.GeneratingChunks.Remove(chunk.ChunkPositionHash);
+				Chunks[posHash].FreeMeshes();
 				Chunks[posHash] = null;
 				Chunks.Remove(posHash);
 			}
@@ -82,7 +83,6 @@ public partial class Region : Node3D
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkGenerate(Chunk chunk)
 	{
-		await Task.Delay(1);
 		chunk.Generating = true;
 		ChunkManager.GeneratingChunks.Add(chunk.ChunkPositionHash);
 
@@ -97,7 +97,6 @@ public partial class Region : Node3D
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkUpdate(Chunk chunk)
 	{
-		await Task.Delay(1);
 		chunk.Generating = true;
 		await Task.Run(async () =>
 		{
@@ -111,11 +110,11 @@ public partial class Region : Node3D
 	{
 		var chunk = ChunkGet(chunkPosHash);
 		if (chunk is null) return;
-		chunk.CreateMesh();
-
-		chunk.CreatePhysics();
 
 		chunk.Generating = false;
+
+		chunk.CreateMesh();
+		chunk.CreatePhysics();
 
 		ChunkManager.GeneratingChunks.Remove(chunk.ChunkPositionHash);
 	}

@@ -7,6 +7,8 @@ namespace Voxel;
 
 public partial class ChunkManager : Node
 {
+	public static ChunkManager Current { get; private set; }
+
 	public static int Seed { get; private set; } = 8237358;
 
 	public static Dictionary<int, Region> Regions { get; private set; } = [];
@@ -20,6 +22,7 @@ public partial class ChunkManager : Node
 
 	public override void _EnterTree()
 	{
+		Current = this;
 		ResourceManager.Ready();
 	}
 
@@ -30,19 +33,42 @@ public partial class ChunkManager : Node
 			Seed = int.MaxValue - 10;
 		}
 
+		GetTree().AutoAcceptQuit = false;
+
 		var plrScene = GD.Load<PackedScene>("res://Scenes/player.tscn");
 		var plr = plrScene.Instantiate();
 		root = GetTree().Root;
 		root.CallDeferred(Node.MethodName.AddChild, plr);
 	}
 
+	public static void CloseGame()
+	{
+		Current._Notification((int)NotificationWMCloseRequest);
+	}
+
+	public override void _Notification(int what)
+	{
+		if (what == NotificationWMCloseRequest)
+		{
+			foreach (var region in Regions)
+			{
+				foreach (var chunk in region.Value.Chunks)
+				{
+					chunk.Value.FreeMeshes();
+				}
+			}
+
+			GetTree().Quit();
+		}
+	}
+
 	public override void _PhysicsProcess(double delta)
 	{
-		if (GeneratingChunks.Count >= 16) return;
+		if (GeneratingChunks.Count >= 32) return;
 
 		if (chunksToSpawn.Count > 0)
 		{
-			for (int i = 0; i < 16; i++)
+			for (int i = 0; i < 8; i++)
 			{
 				if (i >= chunksToSpawn.Count) break;
 

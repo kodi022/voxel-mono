@@ -12,11 +12,13 @@ public static class ResourceManager
 	public static Dictionary<int, Biome> BiomeRegistry { get; private set; } = [];
 	public static Dictionary<int, Structure> StructureRegistry { get; private set; } = [];
 
+	public static BlockInstance BlockInstanceAir { get; private set; }
+	public static BlockInstance BlockInstanceIrrefragabiles { get; private set; }
+
 	public static void Ready()
 	{
 		RegisterBlocks("res://Resources/Blocks/");
 
-		// ! combine dictionaries to be able to search multiple paths later
 		BiomeRegistry = RegisterGeneric<Biome>("res://Resources/Biomes/");
 		StructureRegistry = RegisterGeneric<Structure>("res://Resources/Structures/");
 	}
@@ -73,8 +75,10 @@ public static class ResourceManager
 
 					if (b.FullId == "base:air")
 					{
-						b.HashId = 0;
+						b.BuildIds(0);
+						BlockInstanceAir = b.MakeInstance();
 					}
+					if (b.FullId == "base:irrefragabiles") BlockInstanceIrrefragabiles = b.MakeInstance();
 
 					BlockRegistry.Add(b.HashId, b);
 					if (b is BlockOre bOre) BlockOreRegistry.Add(bOre.HashId, bOre);
@@ -86,6 +90,9 @@ public static class ResourceManager
 		GD.Print($"BlockRegistry: {BlockRegistry.Count} Blocks");
 	}
 
+	/// <summary>
+	/// Gets block by reference
+	/// </summary>
 	public static Block GetBlock(string blockId)
 	{
 		if (blockId == "base:air") return GetAir();
@@ -96,18 +103,28 @@ public static class ResourceManager
 		return null;
 	}
 
-	public static Block GetBlockCopy(string blockId)
+	/// <summary>
+	/// Gets block by reference
+	/// </summary>
+	public static Block GetBlock(int blockHash)
 	{
-		if (blockId == "base:air") return GetAir();
+		if (blockHash == 0) return GetAir();
 
-		var block = GetBlock(blockId);
-		if (block == "base:air") return block;
+		if (BlockRegistry.TryGetValue(blockHash, out Block val))
+			return val;
 
-		var newBlock = block.Duplicate() as Block;
-		newBlock.FullId = block.FullId;
-		newBlock.HashId = block.HashId;
-		newBlock.Hp = block.Hp;
-		return newBlock;
+		return null;
+	}
+
+	/// <summary>
+	/// Creates simpler block class for use in Chunks
+	/// </summary>
+	public static BlockInstance GetBlockInstance(string blockId)
+	{
+		if (blockId == "base:air") return BlockInstanceAir;
+		if (blockId == "base:irrefragabiles") return BlockInstanceIrrefragabiles;
+
+		return GetBlock(blockId)?.MakeInstance();
 	}
 
 	public static Block GetAir()

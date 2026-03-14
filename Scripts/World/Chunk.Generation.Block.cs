@@ -70,22 +70,20 @@ public partial class Chunk
             }
         }
 
-        var noise = SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value);
-
+        var noise = SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Simplex, 0.1f);
         for (sbyte x = 0; x < ChunkSize; x++)
         {
             for (sbyte z = 0; z < ChunkSize; z++)
             {
                 for (sbyte y = 0; y < ChunkSize; y++)
                 {
-                    var block = ResourceManager.GetBlock(tempBlocks[x, y, z]);
+                    var block = ResourceManager.GetBlockInstance(tempBlocks[x, y, z]);
+                    Blocks[x, y, z] = block;
                     if (!block.IsAir && !block.Unbreakable)
                     {
                         var blockHpSize = block.HpRange.Y - block.HpRange.X;
-                        block.Hp = noise.GetNoise3D(x, y, z) * blockHpSize + block.HpRange.X;
+                        Blocks[x, y, z].Hp = noise.GetNoise3D(x, y, z) * blockHpSize + block.HpRange.X;
                     }
-
-                    Blocks[x, y, z] = block;
                 }
             }
         }
@@ -162,8 +160,11 @@ public partial class Chunk
     {
         private static float GetSeededRandom(BlockVec3 position, int seedOffset)
         {
-            int hash = position.GetVecHash() ^ ChunkManager.Seed ^ seedOffset;
-            return Math.Abs(hash % 10000000 / 10000000f);
+            unchecked
+            {
+                int hash = position.GetVecHash() * ChunkManager.Seed * seedOffset;
+                return Math.Abs(hash % 10000000 / 10000000f);
+            }
         }
 
         public override string Generate(ref BlockGenInput input)
@@ -184,22 +185,20 @@ public partial class Chunk
 
                     var chance = 1f;
                     var reduct = 1f / gSize;
-                    var rand = GetSeededRandom(input.Position + Vector3I.Left, ore.Value.HashId);
-                    var pos = Directions[(int)(rand * 6f)] + input.Position;
-                    var localPos = Directions[(int)(rand * 6f)] + input.IndexPosition;
-                    for (int i = 0; i < gSize; i++)
+                    var worldPos = Directions[0] + input.Position;
+                    for (int i = 0; i < 100; i++)
                     {
+                        var rand = GetSeededRandom(worldPos, ore.Value.HashId);
+                        worldPos += Directions[(int)(rand * 6f)];
+
+                        var localPos = worldPos.ToLocal(input.Chunk.ChunkPosition);
                         if (!localPos.IsInside(ChunkSize)) break;
                         if (input.CurrentBlocks[localPos.X, localPos.Y, localPos.Z] == "base:air") break;
-                        if (GetSeededRandom(pos, ore.Value.HashId) > chance) break;
+                        if (GetSeededRandom(worldPos, ore.Value.HashId) > chance) break;
 
                         chance -= reduct;
                         input.CurrentBlocks[localPos.X, localPos.Y, localPos.Z] = block;
-                        rand = GetSeededRandom(pos, ore.Value.HashId + 11);
-                        pos = Directions[(int)(rand * 6f)] + pos;
-                        localPos = Directions[(int)(rand * 6f)] + localPos;
                     }
-
                     break;
                 }
             }
@@ -213,7 +212,7 @@ public partial class Chunk
         public override string Generate(ref BlockGenInput input)
         {
             string block = input.CurrentBlocks[input.IndexPosition.X, input.IndexPosition.Y, input.IndexPosition.Z];
-            if (!input.Position.IsInside(-500, 500))
+            if (!input.Position.IsInside(-1000, 1000))
             {
                 block = "base:irrefragabiles";
             }
