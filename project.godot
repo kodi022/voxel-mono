@@ -11,8 +11,9 @@ config_version=5
 [application]
 
 config/name="voxel_mono"
-run/main_scene="uid://d1kl380be6hq3"
+run/main_scene="uid://cfotvkk13a5d1"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus")
+run/max_fps=300
 config/icon="res://icon.svg"
 
 [display]
@@ -64,11 +65,9 @@ jump={
 [physics]
 
 3d/physics_engine="Jolt Physics"
-jolt_physics_3d/limits/max_bodies=40960
 
 [rendering]
 
-rendering_device/d3d12/max_resource_descriptors=262144
 textures/canvas_textures/default_texture_filter=0
 textures/canvas_textures/default_texture_repeat=1
 rendering_device/driver.windows="d3d12"

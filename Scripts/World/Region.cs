@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Voxel.Resource;
 
@@ -33,6 +34,20 @@ public partial class Region : Node3D
 		{
 			var chunk = new Chunk(this, pos);
 			Chunks.Add(posHash, chunk);
+
+			for (int i = 0; i < 6; i++)
+			{
+				var adjPos = pos + Chunk.Directions[i];
+				if (ChunkManager.FindChunk(adjPos) is Chunk adjChunk)
+				{
+					chunk.AdjacentChunks[i] = true;
+					var dir = i % 2 == 0 ? i + 1 : i - 1;
+					adjChunk.AdjacentChunks[dir] = true;
+					if (!adjChunk.AdjacentChunks.Contains(false) && adjChunk.BlocksGenerated) ChunkManager.UpdateChunk(adjChunk.ChunkPosition);
+				}
+			}
+
+			ChunkGenerate(chunk);
 		}
 	}
 
@@ -67,7 +82,7 @@ public partial class Region : Node3D
 			if (chunk is not null)
 			{
 				ChunkManager.GeneratingChunks.Remove(chunk.ChunkPositionHash);
-				Chunks[posHash].FreeMeshes();
+				Chunks[posHash].CleanupChunk();
 				Chunks[posHash] = null;
 				Chunks.Remove(posHash);
 			}
@@ -83,7 +98,6 @@ public partial class Region : Node3D
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkGenerate(Chunk chunk)
 	{
-		chunk.Generating = true;
 		ChunkManager.GeneratingChunks.Add(chunk.ChunkPositionHash);
 
 		await Task.Run(async () =>
@@ -97,7 +111,6 @@ public partial class Region : Node3D
 	// necessary because CallDeferred is required yet chunks are not Node's
 	public async void ChunkUpdate(Chunk chunk)
 	{
-		chunk.Generating = true;
 		await Task.Run(async () =>
 		{
 			await chunk.GenerateMeshData();
@@ -110,8 +123,6 @@ public partial class Region : Node3D
 	{
 		var chunk = ChunkGet(chunkPosHash);
 		if (chunk is null) return;
-
-		chunk.Generating = false;
 
 		chunk.CreateMesh();
 		chunk.CreatePhysics();

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Block" format=3 uid="uid://dlnf7mfbudeh4"]
+
+[ext_resource type="Texture2D" uid="uid://dkbfybboknr4x" path="res://Images/blocks/building/glass.png" id="1_43vev"]
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resource/Block/Block.cs" id="2_ifgia"]
+
+[resource]
+script = ExtResource("2_ifgia")
+Name = "Glass"
+BombResistance = -1.0
+HpRange = Vector2(2, 2)
+BlockCull = 1
+BlockMaterial = 1
+AlbedoTexture = ExtResource("1_43vev")
+ResourceId = "glass"

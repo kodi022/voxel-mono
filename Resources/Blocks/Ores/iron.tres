@@ -7,7 +7,7 @@
 script = ExtResource("2_24dfd")
 GroupSize = 2
 Name = "Iron"
+HpRange = Vector2(6, 10)
 ColorTint = Color(0.725196, 0.6619648, 0.6166417, 1)
 AlbedoTexture = ExtResource("1_a1uu1")
-HpRange = Vector2(6, 10)
 ResourceId = "iron"

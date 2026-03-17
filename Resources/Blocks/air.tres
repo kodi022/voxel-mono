@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1_cjogu")
 Name = "Air"
-IsAir = true
 HpRange = Vector2(0, 0)
+BlockCull = 2
 ResourceId = "air"

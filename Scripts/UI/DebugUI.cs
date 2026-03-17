@@ -35,7 +35,7 @@ public partial class DebugUI : Node
 
             int nonAirBlock = 0, nullBlock = 0;
             int chunks = 0;
-            if (Player.Self.WithinChunk is not null && !Player.Self.WithinChunk.Generating)
+            if (Player.Self.WithinChunk is not null && !Player.Self.WithinChunk.MeshGenerating)
             {
                 foreach (var block in Player.Self.WithinChunk.Blocks)
                 {

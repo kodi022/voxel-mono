@@ -1,5 +1,5 @@
 using Godot;
-using System;
+using System.Collections.Generic;
 using Voxel.Resource;
 
 namespace Voxel.World;
@@ -15,10 +15,25 @@ public partial class Chunk
     public readonly ChunkVec3 ChunkPosition;
     public readonly int ChunkPositionHash;
 
-    public bool Visible { get; private set; } = false;
     public bool Simulating { get; private set; } = false;
+    public bool BlocksGenerated { get; private set; } = false;
+    public bool MeshGenerating { get; private set; } = false;
 
-    public bool Generating { get; set; } = false;
+    public bool GeneratedMesh => meshInstance.IsValid;
+    public bool GeneratedPhysicsMesh => physicsMeshInstance.IsValid;
+
+    // position hash
+    public Dictionary<int, Node> ChunkEntities { get; private set; } = [];
+
+    // true if chunk at Directions[index] exists
+    public bool[] AdjacentChunks { get; set; } = [false, false, false, false, false, false];
+
+    private static readonly ChunkVec3[] neighborOffset =
+    {
+        new ( 1,  0,  0), new (-1,  0,  0),
+        new ( 0,  1,  0), new ( 0, -1,  0),
+        new ( 0,  0,  1), new ( 0,  0, -1),
+    };
 
     private readonly Region region;
     private readonly World3D world3D;
@@ -33,19 +48,15 @@ public partial class Chunk
 
         ChunkPosition = worldPosition;
         ChunkPositionHash = ChunkPosition.GetVecHash();
-
-        region.ChunkGenerate(this);
     }
 
-    public void FreeMeshes()
+    public void CleanupChunk()
     {
         if (GeneratedMesh)
             RenderingServer.FreeRid(meshInstance);
 
         if (GeneratedPhysicsMesh)
             PhysicsServer3D.FreeRid(physicsMeshInstance);
-
-        Visible = false;
     }
 
     public void EnableSimulation()
@@ -85,20 +96,42 @@ public partial class Chunk
     public void SetBlocks(in BlockVec3[] poss, in string blockId)
     {
         bool change = false;
+        List<ChunkVec3> neighborUpdate = [];
         foreach (var pos in poss)
         {
             var locPos = pos.ToLocal(ChunkPosition);
             if (!locPos.IsInside(ChunkSize)) continue;
 
             var block = Blocks[locPos.X, locPos.Y, locPos.Z];
-            if (blockId == "base:air") if (block.IsAir || block.Unbreakable) continue;
+            if (blockId == "base:air") if (block == 0 || block.Unbreakable) continue;
             else if (block.Unbreakable) continue;
 
+            if (locPos.X == ChunkSize - 1) neighborUpdate.Add(ChunkPosition + neighborOffset[0]);
+            if (locPos.X == 0) neighborUpdate.Add(ChunkPosition + neighborOffset[1]);
+            if (locPos.Y == ChunkSize - 1) neighborUpdate.Add(ChunkPosition + neighborOffset[2]);
+            if (locPos.Y == 0) neighborUpdate.Add(ChunkPosition + neighborOffset[3]);
+            if (locPos.Z == ChunkSize - 1) neighborUpdate.Add(ChunkPosition + neighborOffset[4]);
+            if (locPos.Z == 0) neighborUpdate.Add(ChunkPosition + neighborOffset[5]);
+
             Blocks[locPos.X, locPos.Y, locPos.Z] = (BlockInstance)blockId;
+            Blocks[locPos.X, locPos.Y, locPos.Z].Hp = Blocks[locPos.X, locPos.Y, locPos.Z].HpRange.Y;
             change = true;
         }
 
-        if (change) region.ChunkUpdate(this);
+        if (change)
+        {
+            ChunkManager.UpdateChunk(ChunkPosition);
+
+            List<ChunkVec3> neighborUpdated = [];
+            foreach (var pos in neighborUpdate)
+            {
+                if (!neighborUpdated.Contains(pos))
+                {
+                    ChunkManager.UpdateChunk(pos);
+                    neighborUpdated.Add(pos);
+                }
+            }
+        }
     }
 
     public void SetBlock(BlockVec3 pos, in string blockId)
@@ -107,13 +140,22 @@ public partial class Chunk
         if (!pos.IsInside(ChunkSize)) return;
 
         var block = Blocks[pos.X, pos.Y, pos.Z];
-        if (blockId == "base:air") if (block.IsAir || block.Unbreakable) return;
+        if (blockId == "base:air") if (block == 0 || block.Unbreakable) return;
         else if (block.Unbreakable) return;
 
         if (block != blockId)
         {
             Blocks[pos.X, pos.Y, pos.Z] = (BlockInstance)blockId;
-            region.ChunkUpdate(this);
+            Blocks[pos.X, pos.Y, pos.Z].Hp = Blocks[pos.X, pos.Y, pos.Z].HpRange.Y;
+
+            if (pos.X == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[0]);
+            if (pos.X == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[1]);
+            if (pos.Y == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[2]);
+            if (pos.Y == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[3]);
+            if (pos.Z == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[4]);
+            if (pos.Z == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[5]);
+
+            ChunkManager.UpdateChunk(ChunkPosition);
         }
     }
 
@@ -126,7 +168,7 @@ public partial class Chunk
 
         var block = Blocks[pos.X, pos.Y, pos.Z];
         if (block is null) return null;
-        if (block.IsAir || block.Unbreakable) return null;
+        if (block == 0 || block.Unbreakable) return null;
 
         return Blocks[pos.X, pos.Y, pos.Z];
     }

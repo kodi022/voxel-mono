@@ -43,6 +43,9 @@ public static class ResourceManager
 				{
 					resource.BuildIds();
 					registry.Add(resource.HashId, resource);
+
+					if (resource.PackageId == "") GD.PushWarning("Resource missing PackageId");
+					if (resource.ResourceId == "") GD.PushWarning("Resource missing ResourceId");
 				}
 			}
 		}
@@ -82,6 +85,9 @@ public static class ResourceManager
 
 					BlockRegistry.Add(b.HashId, b);
 					if (b is BlockOre bOre) BlockOreRegistry.Add(bOre.HashId, bOre);
+
+					if (b.PackageId == "") GD.PushWarning("Block missing PackageId");
+					if (b.ResourceId == "") GD.PushWarning("Block missing ResourceId");
 				}
 			}
 		}

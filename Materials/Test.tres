@@ -1,0 +1,7 @@
+[gd_resource type="ORMMaterial3D" format=3 uid="uid://3sjfpyptd8m6"]
+
+[ext_resource type="Texture2D" uid="uid://5y7t7461i71v" path="res://Images/blocks/stone/stone2_height.png" id="1_fgklm"]
+
+[resource]
+albedo_texture = ExtResource("1_fgklm")
+texture_filter = 0

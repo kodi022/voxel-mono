@@ -44,7 +44,7 @@ public partial class Player : CharacterBody3D, IPawn
 	{
 		Self ??= this;
 
-		Selector = (Node3D)GD.Load<PackedScene>("res://Scenes/block_select.tscn").Instantiate();
+		Selector = (Node3D)GD.Load<PackedScene>("res://Scenes/selector.tscn").Instantiate();
 		GetTree().Root.AddChild(Selector);
 	}
 
@@ -73,18 +73,15 @@ public partial class Player : CharacterBody3D, IPawn
 
 		WithinChunk = ChunkManager.FindChunk(ChunkVec3.FromVector3(GlobalPosition));
 
-		if (rendDisTask is not null)
+		if (rendDisTask is null)
 		{
-			if (rendDisTask.Status == TaskStatus.RanToCompletion || rendDisTask.Status == TaskStatus.Faulted)
-			{
-				rendDisTask = ProcessRenderDistance(GlobalPosition);
-				ChunkManager.SpawnChunksOverride(chunkToSpawn);
-				ChunkManager.DestroyChunks(chunkToDestroy);
-				chunkToSpawn = [];
-				chunkToDestroy = [];
-			}
+			rendDisTask = ProcessRenderDistance(GlobalPosition);
+			ChunkManager.SpawnChunksOverride(chunkToSpawn);
+			ChunkManager.DestroyChunks(chunkToDestroy);
+			chunkToSpawn = [];
+			chunkToDestroy = [];
 		}
-		else
+		else if (rendDisTask.Status == TaskStatus.RanToCompletion || rendDisTask.Status == TaskStatus.Faulted)
 		{
 			rendDisTask = ProcessRenderDistance(GlobalPosition);
 			ChunkManager.SpawnChunksOverride(chunkToSpawn);
@@ -97,7 +94,7 @@ public partial class Player : CharacterBody3D, IPawn
 	// Called every frame. 'delta' is the elapsed time since the previous frame.
 	public override void _PhysicsProcess(double delta)
 	{
-		if (WithinChunk is null || WithinChunk.Generating) return;
+		if (WithinChunk is null || WithinChunk.MeshGenerating) return;
 
 		CurrentController.ControllerPhysicsProcess(delta, this);
 	}

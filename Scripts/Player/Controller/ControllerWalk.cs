@@ -99,7 +99,7 @@ public class ControllerWalk : Controller
                         }
                         else
                         {
-                            Chunk.ChunkPlaceBlock(player.AimBlockFrontPosition, "base:brick");
+                            Chunk.ChunkPlaceBlock(player.AimBlockFrontPosition, "base:glass");
                         }
                     }
                     break;

@@ -7,6 +7,7 @@ namespace Voxel.World;
 public partial class Chunk
 {
     public static readonly OrmMaterial3D BlockMaterial = GD.Load<OrmMaterial3D>("res://Materials/Block.tres");
+    public static readonly OrmMaterial3D BlockTransMaterial = GD.Load<OrmMaterial3D>("res://Materials/Block_Trans.tres");
     public static readonly Texture2D MissingTexture = GD.Load<Texture2D>("res://Images/missing.png");
 
     public static readonly Vector3[][] FaceVertexOffsets =
@@ -27,10 +28,7 @@ public partial class Chunk
         new (0,1),
     ];
 
-    private static readonly Dictionary<int, OrmMaterial3D> blockMaterials = [];
-
-    public bool GeneratedMesh => meshInstance.IsValid;
-    public bool GeneratedPhysicsMesh => physicsMeshInstance.IsValid;
+    private static readonly Dictionary<int, Material> blockMaterials = [];
 
     private Rid meshInstance;
     private ArrayMesh meshInstanceData;
@@ -43,6 +41,8 @@ public partial class Chunk
 
     public Task GenerateMeshData()
     {
+        MeshGenerating = true;
+
         meshInstanceData = new();
         surfaceBlockIds = [];
         physicsMeshFaces = [];
@@ -56,25 +56,40 @@ public partial class Chunk
             for (sbyte x = 0; x < ChunkSize; x += blockSize) for (sbyte z = 0; z < ChunkSize; z += blockSize) for (sbyte y = 0; y < ChunkSize; y += blockSize)
             {
                 var block = Blocks[x, y, z];
-                if (block.HashId == 0) continue;
+                var fullBlock = ResourceManager.GetBlock(block.HashId);
+                if (fullBlock.BlockCull == Resource.Block.BlockCullEnum.Translucent) continue;
 
                 for (sbyte w = 0; w < 6; w++)
                 {
                     Vector3B checkPos = new Vector3B(x, y, z) + Directions[w] * blockSize;
+
                     if (checkPos.IsInside(ChunkSize))
-                    {
-                        if (Blocks[checkPos.X, checkPos.Y, checkPos.Z].HashId == 0)
+                    { // inner edges
+                        var adjBlock = ResourceManager.GetBlock(Blocks[checkPos.X, checkPos.Y, checkPos.Z].HashId);
+                        if (adjBlock.BlockCull == Resource.Block.BlockCullEnum.Opaque) continue;
+                        if (fullBlock.BlockCull == Resource.Block.BlockCullEnum.Transparent && adjBlock.BlockCull == Resource.Block.BlockCullEnum.Transparent) continue;
+
+                        surfaces.TryAdd(block.HashId, []);
+                        if (!surfaces[block.HashId].TryAdd(LOD, [new(x, y, z, w)]))
                         {
-                            surfaces.TryAdd(block.HashId, []);
-                            if (!surfaces[block.HashId].TryAdd(LOD, [new(x, y, z, w)]))
-                            {
-                                surfaces[block.HashId][LOD].Add(new(x, y, z, w));
-                            }
+                            surfaces[block.HashId][LOD].Add(new(x, y, z, w));
                         }
                     }
                     else
-                    {
-                        // ! this is outer edge faces, fix by checking adjacent chunks
+                    { // outer edges
+                        if (!AdjacentChunks[w]) continue;
+
+                        var chunk2 = ChunkManager.FindChunk(ChunkPosition + Directions[w]);
+                        if (chunk2 is null) continue;
+                        if (!chunk2.BlocksGenerated) continue;
+
+                        // creates negatives if adding by 16
+                        var checkPos2 = (checkPos + ChunkSize * 2) % ChunkSize;
+                        var adjBlock = ResourceManager.GetBlock(chunk2.Blocks[checkPos2.X, checkPos2.Y, checkPos2.Z].HashId);
+                        if (adjBlock is null) continue;
+                        if (adjBlock.BlockCull == Resource.Block.BlockCullEnum.Opaque) continue;
+                        if (fullBlock.BlockCull == Resource.Block.BlockCullEnum.Transparent && adjBlock.BlockCull == Resource.Block.BlockCullEnum.Transparent) continue;
+
                         surfaces.TryAdd(block.HashId, []);
                         if (!surfaces[block.HashId].TryAdd(LOD, [new(x, y, z, w)]))
                         {
@@ -86,7 +101,11 @@ public partial class Chunk
         }
 
         surfaceCount = surfaces.Count;
-        if (surfaceCount == 0) return Task.CompletedTask;
+        if (surfaceCount == 0)
+        {
+            MeshGenerating = false;
+            return Task.CompletedTask;
+        }
 
         var fullRenderDistance = Player.RenderDistance * ChunkSize * Player.RenderDistance * ChunkSize;
         foreach (var blockSurfaceKVP in surfaces)
@@ -165,6 +184,7 @@ public partial class Chunk
             surfaceBlockIds.Add(blockSurfaceKVP.Key);
         }
 
+        MeshGenerating = false;
         return Task.CompletedTask;
     }
 
@@ -173,7 +193,7 @@ public partial class Chunk
         if (meshInstance.IsValid)
             RenderingServer.FreeRid(meshInstance);
 
-        if (Generating) return;
+        if (MeshGenerating) return;
         var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
         meshInstance = RenderingServer.InstanceCreate();
         RenderingServer.InstanceSetBase(meshInstance, meshInstanceData.GetRid());
@@ -181,18 +201,34 @@ public partial class Chunk
         RenderingServer.InstanceSetTransform(meshInstance, transform);
         RenderingServer.InstanceGeometrySetLodBias(meshInstance, -1f);
 
-        if (Generating) return;
+        if (MeshGenerating) return;
         int surfaceIndex = 0;
         foreach (var id in surfaceBlockIds)
         {
-            if (!blockMaterials.TryGetValue(id, out OrmMaterial3D mat))
+            if (!blockMaterials.TryGetValue(id, out Material mat))
             {
-                mat = (OrmMaterial3D)BlockMaterial.Duplicate();
                 var block = ResourceManager.BlockRegistry[id];
-                mat.AlbedoColor = block.ColorTint;
-                mat.AlbedoTexture = LoadTextureFromBlock(block.AlbedoTexture, block.AlbedoTexturePath);
-                mat.NormalTexture = LoadTextureFromBlock(block.NormalTexture, block.NormalTexturePath);
-                mat.EmissionTexture = LoadTextureFromBlock(block.EmissionTexture, block.EmissionTexturePath);
+                if (block.BlockMaterial == Resource.Block.BlockMaterialEnum.Default)
+                {
+                    mat = (OrmMaterial3D)BlockMaterial.Duplicate();
+                    ((OrmMaterial3D)mat).AlbedoColor = block.ColorTint;
+                    ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture);
+                    ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture);
+                    ((OrmMaterial3D)mat).EmissionTexture = SetTextureFromBlock(block.EmissionTexture);
+                }
+                else if (block.BlockMaterial == Resource.Block.BlockMaterialEnum.Transparent)
+                {
+                    mat = (OrmMaterial3D)BlockTransMaterial.Duplicate();
+                    ((OrmMaterial3D)mat).AlbedoColor = block.ColorTint;
+                    ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture);
+                    ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture);
+                    ((OrmMaterial3D)mat).EmissionTexture = SetTextureFromBlock(block.EmissionTexture);
+                }
+                else
+                {
+                    mat = (Material)block.CustomMaterial.Duplicate();
+                }
+
                 blockMaterials.Add(id, mat);
             }
 
@@ -201,8 +237,6 @@ public partial class Chunk
         }
 
         surfaceBlockIds = null;
-
-        Visible = true;
     }
 
     public void CreatePhysics()
@@ -210,7 +244,7 @@ public partial class Chunk
         if (physicsMeshInstance.IsValid)
             PhysicsServer3D.FreeRid(physicsMeshInstance);
 
-        if (Generating) return;
+        if (MeshGenerating) return;
         var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
         physicsMeshInstance = PhysicsServer3D.BodyCreate();
         physicsMeshInstanceShape = PhysicsServer3D.ConcavePolygonShapeCreate();
@@ -222,10 +256,9 @@ public partial class Chunk
         PhysicsServer3D.BodySetSpace(physicsMeshInstance, world3D.Space);
     }
 
-    private static Texture2D LoadTextureFromBlock(Texture2D resourceTexture, string resourceTexturePath)
+    private static Texture2D SetTextureFromBlock(Texture2D resourceTexture)
     {
         if (resourceTexture is not null) return resourceTexture;
-        if (!string.IsNullOrEmpty(resourceTexturePath)) return GD.Load<Texture2D>(resourceTexturePath);
         return MissingTexture;
     }
 }

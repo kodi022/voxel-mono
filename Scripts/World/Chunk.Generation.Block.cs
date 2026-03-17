@@ -19,11 +19,10 @@ public partial class Chunk
         new (-1,  0,  0),
     ];
 
-    // static noise because it seems godot does not free old instanced noises
-    // previously created FastNoiseLite inside of NoiseLayers, godot quickly kept >2000000 of them
-    // ! make noise settings struct, get from list using struct hash
-    FastNoiseLite noise = new();
+    // noise per chunk because static noises collide with chunk multithreading
+    private FastNoiseLite noise = new();
 
+    // ! make noise settings struct
     FastNoiseLite SetNoiseSettings(int seedOffset, FastNoiseLite.NoiseTypeEnum noiseType, float frequency = 1f, float warpAmplitude = 0f)
     {
         bool warpEnabled = warpAmplitude != 0;
@@ -70,7 +69,7 @@ public partial class Chunk
             }
         }
 
-        var noise = SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Simplex, 0.1f);
+        var noise = SetNoiseSettings(0, FastNoiseLite.NoiseTypeEnum.Value, 1f);
         for (sbyte x = 0; x < ChunkSize; x++)
         {
             for (sbyte z = 0; z < ChunkSize; z++)
@@ -79,32 +78,18 @@ public partial class Chunk
                 {
                     var block = ResourceManager.GetBlockInstance(tempBlocks[x, y, z]);
                     Blocks[x, y, z] = block;
-                    if (!block.IsAir && !block.Unbreakable)
+                    if (block != 0 && !block.Unbreakable)
                     {
                         var blockHpSize = block.HpRange.Y - block.HpRange.X;
-                        Blocks[x, y, z].Hp = noise.GetNoise3D(x, y, z) * blockHpSize + block.HpRange.X;
+                        var halfBlockHpSize = blockHpSize * 0.5f;
+                        Blocks[x, y, z].Hp = (noise.GetNoise3D(x, y, z) * halfBlockHpSize) + block.HpRange.X + halfBlockHpSize;
                     }
                 }
             }
         }
 
+        BlocksGenerated = true;
         return Task.CompletedTask;
-    }
-
-    private string GenerateBlockAtPosition(ref BlockGenInput input)
-    {
-        List<BlockGenLayer> layers = [
-            new BlockGenLayerBase(),
-            new BlockGenLayerOre(),
-            new BlockGenLayerEdge()
-        ];
-
-        string block = "";
-        foreach (var layer in layers)
-        {
-            block = layer.Generate(ref input);
-        }
-        return block;
     }
 
     public struct BlockGenInput

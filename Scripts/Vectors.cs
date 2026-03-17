@@ -141,6 +141,8 @@ public struct ChunkVec3
     public static ChunkVec3 operator /(ChunkVec3 v, int o) => new(v.X / o, v.Y / o, v.Z / o);
     public static ChunkVec3 operator +(ChunkVec3 v, int o) => new(v.X + o, v.Y + o, v.Z + o);
     public static ChunkVec3 operator -(ChunkVec3 v, int o) => new(v.X - o, v.Y - o, v.Z - o);
+    public static ChunkVec3 operator +(ChunkVec3 v, ChunkVec3 o) => new(v.X + o.X, v.Y + o.Y, v.Z + o.Z);
+    public static ChunkVec3 operator +(ChunkVec3 v, Vector3B o) => new(v.X + o.X, v.Y + o.Y, v.Z + o.Z);
 
     public static explicit operator ChunkVec3(BlockVec3 v) => new(v.X.FIntDiv(Chunk.ChunkSize), v.Y.FIntDiv(Chunk.ChunkSize), v.Z.FIntDiv(Chunk.ChunkSize));
     public static explicit operator ChunkVec3(RegionVec3 v) => new(v.X * Chunk.ChunkSize, v.Y * Chunk.ChunkSize, v.Z * Chunk.ChunkSize);
@@ -225,11 +227,12 @@ public struct Vector3B
 
     public static implicit operator Vector3(Vector3B v) => new(v.X, v.Y, v.Z);
 
-
     public readonly bool IsInside(sbyte topLimit)
     {
         return topLimit > X && X > -1 && topLimit > Y && Y > -1 && topLimit > Z && Z > -1;
     }
+
+    public override readonly string ToString() => $"{X}, {Y}, {Z}";
 }
 
 public struct Vector2B
@@ -258,4 +261,6 @@ public struct Vector2B
     {
         return new(v.X, v.Y);
     }
+
+    public override readonly string ToString() => $"{X}, {Y}";
 }

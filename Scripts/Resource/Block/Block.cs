@@ -8,8 +8,7 @@ public class BlockInstance
 	public int HashId { get; set; }
 
 	public string Name { get; set; }
-	public Block.BlockDirections DirectionSupport { get; set; }
-	public bool IsAir { get; set; }
+	public Block.BlockDirectionsEnum BlockDirections { get; set; }
 	public bool Unbreakable { get; set; }
 	public bool InvulnerableLava { get; set; }
 	public float BombResistance { get; set; }
@@ -46,12 +45,32 @@ public class BlockInstance
 [GlobalClass]
 public partial class Block : VoxelResource
 {
-	public enum BlockDirections
+	public enum BlockDirectionsEnum
 	{
 		None,
 		Horizontal,
 		Vertical,
 		HorizonalAndVertical,
+	}
+
+	public enum BlockModelEnum
+	{
+		Default,
+		Custom,
+	}
+
+	public enum BlockMaterialEnum
+	{
+		Default,
+		Transparent,
+		Custom
+	}
+
+	public enum BlockCullEnum
+	{
+		Opaque,
+		Transparent,
+		Translucent,
 	}
 
 	public static bool operator ==(Block self, int hashId) => self.HashId == hashId;
@@ -63,20 +82,39 @@ public partial class Block : VoxelResource
 	public static bool operator ==(Block left, BlockInstance right) => left.HashId == right.HashId;
 	public static bool operator !=(Block left, BlockInstance right) => left.HashId != right.HashId;
 
-	[Export]
+	[Export, ExportGroup("Identity")]
 	public string Name { get; set; } = "";
-	[Export]
-	public BlockDirections DirectionSupport { get; set; } = BlockDirections.None;
-	[Export]
-	public bool IsAir { get; set; } = false;
-	[Export]
+
+
+	[Export, ExportGroup("Function")]
 	public bool Unbreakable { get; set; }
 	[Export]
 	public bool InvulnerableLava { get; set; }
 	[Export]
 	public float BombResistance { get; set; }
-
 	[Export]
+	public string EntityScenePath { get; set; }
+	[Export]
+	public Vector2 HpRange { get; set; } = new(2, 4);
+
+
+	[Export, ExportGroup("Visual")]
+	public BlockDirectionsEnum BlockDirections { get; set; } = BlockDirectionsEnum.None;
+
+	[Export, ExportGroup("Visual")]
+	public BlockCullEnum BlockCull { get; set; } = BlockCullEnum.Opaque;
+
+	[Export, ExportGroup("Visual")]
+	public BlockModelEnum BlockModel { get; set; } = BlockModelEnum.Default;
+
+	[Export, ExportSubgroup("Model.Custom")]
+	public Mesh Model { get; set; }
+
+	[Export, ExportGroup("Visual")]
+	public BlockMaterialEnum BlockMaterial { get; set; } = BlockMaterialEnum.Default;
+
+	// default material
+	[Export, ExportSubgroup("Material.Default Material.Transparent")]
 	public Color ColorTint { get; set; } = Color.Color8(255, 255, 255);
 	[Export]
 	public Texture2D AlbedoTexture { get; set; }
@@ -85,21 +123,14 @@ public partial class Block : VoxelResource
 	[Export]
 	public Texture2D EmissionTexture { get; set; }
 
-	// try if above is null (possible useful for modding)
-	[Export]
-	public string AlbedoTexturePath { get; set; }
-	[Export]
-	public string NormalTexturePath { get; set; }
-	[Export]
-	public string EmissionTexturePath { get; set; }
-
-	[Export]
-	public Vector2 HpRange { get; set; } = new(2, 4);
+	// custom material
+	[Export, ExportSubgroup("Material.Custom")]
+	public Material CustomMaterial { get; set; }
 
 	// OnBreak (add export with choice on what block to replace, default air 0)
 	// OnLavaConsume (lava tries to consume)
 
-	public static void OnHit(DamageInfo info)
+	public virtual void OnHit(DamageInfo info)
 	{
 		if (info.Damage * 100 < info.BlockInstance.HpRange.Y) return;
 
@@ -113,11 +144,19 @@ public partial class Block : VoxelResource
 		// block damage overlay?
 	}
 
-	public static void OnBreak(DamageInfo info)
+	public virtual void OnBreak(DamageInfo info)
 	{
 		// send different block back to chunk? (allow other than air)
 
 		// particle
+	}
+
+	public virtual void OnUpdate(DamageInfo info)
+	{
+	}
+
+	public virtual void OnTouch(DamageInfo info)
+	{
 	}
 
 	public BlockInstance MakeInstance()
@@ -126,8 +165,7 @@ public partial class Block : VoxelResource
 		{
 			HashId = HashId,
 			Name = Name,
-			DirectionSupport = DirectionSupport,
-			IsAir = IsAir,
+			BlockDirections = BlockDirections,
 			Unbreakable = Unbreakable,
 			InvulnerableLava = InvulnerableLava,
 			BombResistance = BombResistance,
@@ -159,6 +197,18 @@ public struct DamageInfo
 	public string Player;
 	public float Damage;
 	public string Tool;
+	public BlockVec3 BlockPosition;
+	public Vector3 HitPosition;
+	public Vector3 FaceNormal;
+	public BlockInstance BlockInstance;
+}
+
+public struct TouchInfo
+{
+	// using temporary player until proper types are implemented
+	public string Player;
+	public BlockVec3 BlockPosition;
+	public Vector3 Velocity;
 	public Vector3 HitPosition;
 	public Vector3 FaceNormal;
 	public BlockInstance BlockInstance;

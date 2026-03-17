@@ -1,0 +1,82 @@
+[gd_scene format=3 uid="uid://cfotvkk13a5d1"]
+
+[ext_resource type="Script" uid="uid://bvfjqkrbpsigq" path="res://Scripts/Global/ChunkManagerMenu.cs" id="1_1rerr"]
+[ext_resource type="Script" uid="uid://c7adxxv672es0" path="res://Scripts/UI/Menu.cs" id="1_cayip"]
+[ext_resource type="FontFile" uid="uid://bu4mqn67khffn" path="res://Fonts/Teko-Bold.ttf" id="2_xhh6f"]
+[ext_resource type="FontFile" uid="uid://u738tvv68shv" path="res://Fonts/RobotoMono-Regular.ttf" id="4_158mb"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_cayip"]
+font = ExtResource("2_xhh6f")
+font_size = 46
+
+[sub_resource type="LabelSettings" id="LabelSettings_wwsa2"]
+font = ExtResource("4_158mb")
+font_size = 20
+
+[node name="Menu" type="Node3D" unique_id=2126725360 node_paths=PackedStringArray("buttonsControl")]
+script = ExtResource("1_cayip")
+buttonsControl = NodePath("Control")
+
+[node name="ChunkManagerMenu" type="Node3D" parent="." unique_id=988229279]
+script = ExtResource("1_1rerr")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1453852261]
+transform = Transform3D(0.7489557, -0.15805706, 0.64349306, 0, 0.9711343, 0.23853347, -0.66262007, -0.178651, 0.7273366, 36.3558, 25.832977, 38.742874)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1986764810]
+transform = Transform3D(0.40514153, -0.78693676, 0.4653932, 0, 0.5090415, 0.860742, -0.91425395, -0.3487223, 0.20623384, 0, 14.465065, 0)
+
+[node name="Title" type="Label" parent="." unique_id=335114082]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 386.0
+offset_bottom = 162.0
+text = "Aeternus Mining"
+label_settings = SubResource("LabelSettings_cayip")
+
+[node name="Version" type="Label" parent="." unique_id=1835087507]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -160.0
+offset_bottom = 47.0
+grow_horizontal = 0
+text = "0.0.1
+"
+label_settings = SubResource("LabelSettings_wwsa2")
+horizontal_alignment = 2
+
+[node name="Control" type="Control" parent="." unique_id=362524272]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 40.0
+offset_top = 150.0
+offset_right = 301.0
+offset_bottom = 611.0
+
+[node name="Button" type="Button" parent="Control" unique_id=1864499120]
+layout_mode = 0
+offset_right = 133.0
+offset_bottom = 50.0
+text = "Singleplayer"
+
+[node name="Button2" type="Button" parent="Control" unique_id=2002586055]
+layout_mode = 0
+offset_top = 56.0
+offset_right = 133.0
+offset_bottom = 106.0
+text = "hi"
+
+[node name="Button3" type="Button" parent="Control" unique_id=1199604520]
+layout_mode = 0
+offset_top = 112.0
+offset_right = 133.0
+offset_bottom = 162.0
+text = "sorry nothing"
+
+[node name="Button4" type="Button" parent="Control" unique_id=406906670]
+layout_mode = 0
+offset_top = 168.0
+offset_right = 133.0
+offset_bottom = 218.0
+text = "Exit"

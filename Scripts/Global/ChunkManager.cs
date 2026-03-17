@@ -8,8 +8,8 @@ namespace Voxel;
 public partial class ChunkManager : Node
 {
 	public static ChunkManager Current { get; private set; }
+	public static int Seed { get; set; } = 5000;
 
-	public static int Seed { get; private set; } = 8237358;
 
 	public static Dictionary<int, Region> Regions { get; private set; } = [];
 
@@ -18,6 +18,7 @@ public partial class ChunkManager : Node
 	private static readonly PackedScene sceneRegion = GD.Load<PackedScene>("res://Scenes/region.tscn");
 	private static Window root;
 
+	private static List<ChunkVec3> chunksToUpdate = [];
 	private static List<ChunkVec3> chunksToSpawn = [];
 
 	public override void _EnterTree()
@@ -54,7 +55,7 @@ public partial class ChunkManager : Node
 			{
 				foreach (var chunk in region.Value.Chunks)
 				{
-					chunk.Value.FreeMeshes();
+					chunk.Value.CleanupChunk();
 				}
 			}
 
@@ -64,15 +65,34 @@ public partial class ChunkManager : Node
 
 	public override void _PhysicsProcess(double delta)
 	{
-		if (GeneratingChunks.Count >= 32) return;
+		int changedChunks = 0;
+		if (chunksToUpdate.Count > 0)
+			for (int i = 0; i < 8; i++)
+			{
+				if (changedChunks > 12) break;
+				if (chunksToUpdate.Count == 0) break;
 
+				var chunkPos = chunksToUpdate[0];
+				var regionPos = (RegionVec3)chunkPos;
+				var regionPosHash = regionPos.GetVecHash();
+
+				if (Regions.TryGetValue(regionPosHash, out Region region))
+				{
+					if (region.ChunkGet(chunkPos) is Chunk chunk) region.ChunkUpdate(chunk);
+					changedChunks++;
+				}
+				chunksToUpdate.Remove(chunkPos);
+			}
+
+		if (GeneratingChunks.Count >= 16) return;
 		if (chunksToSpawn.Count > 0)
 		{
 			for (int i = 0; i < 8; i++)
 			{
-				if (i >= chunksToSpawn.Count) break;
+				if (changedChunks > 12) break;
+				if (chunksToSpawn.Count == 0) break;
 
-				var chunkPos = chunksToSpawn[i];
+				var chunkPos = chunksToSpawn[0];
 				if (GeneratingChunks.Contains(chunkPos.GetVecHash())) continue;
 
 				var regionPos = (RegionVec3)chunkPos;
@@ -81,6 +101,7 @@ public partial class ChunkManager : Node
 				if (Regions.TryGetValue(regionPosHash, out Region region))
 				{
 					region.ChunkCreate(chunkPos);
+					changedChunks++;
 				}
 				else
 				{
@@ -92,6 +113,14 @@ public partial class ChunkManager : Node
 
 				chunksToSpawn.Remove(chunkPos);
 			}
+		}
+	}
+
+	public static void UpdateChunk(ChunkVec3 pos)
+	{
+		if (!chunksToUpdate.Contains(pos))
+		{
+			chunksToUpdate.Add(pos);
 		}
 	}
 
