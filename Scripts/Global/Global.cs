@@ -32,6 +32,18 @@ public static class Global
         }
     }
 
+    /// <summary>
+    /// Gives float between 0 and 1
+    /// </summary>
+    public static float GetSeededRandom(BlockVec3 position, int seedOffset)
+    {
+        unchecked
+        {
+            int hash = position.GetVecHash() * ChunkManager.Seed * seedOffset;
+            return System.Math.Abs(hash % 10000000 / 10000000f);
+        }
+    }
+
     static readonly Dictionary<int, Stopwatch> watches = [];
     public static void StartWatch(int watchId)
     {

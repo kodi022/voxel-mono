@@ -48,6 +48,7 @@ public partial class Chunk
         List<BlockGenLayer> layers = [
             new BlockGenLayerBase(),
             new BlockGenLayerOre(),
+            new BlockGenStructures(),
             new BlockGenLayerEdge()
         ];
 
@@ -143,15 +144,6 @@ public partial class Chunk
 
     public class BlockGenLayerOre : BlockGenLayer
     {
-        private static float GetSeededRandom(BlockVec3 position, int seedOffset)
-        {
-            unchecked
-            {
-                int hash = position.GetVecHash() * ChunkManager.Seed * seedOffset;
-                return Math.Abs(hash % 10000000 / 10000000f);
-            }
-        }
-
         public override string Generate(ref BlockGenInput input)
         {
             string block = input.CurrentBlocks[input.IndexPosition.X, input.IndexPosition.Y, input.IndexPosition.Z];
@@ -161,7 +153,7 @@ public partial class Chunk
             foreach (var ore in ores)
             {
                 var threshold = ore.Value.AmountPerChunk / (ChunkSize * ChunkSize * ChunkSize);
-                if (GetSeededRandom(input.Position, ore.Value.HashId) < threshold)
+                if (Global.GetSeededRandom(input.Position, ore.Value.HashId) < threshold)
                 {
                     block = ore.Value.FullId;
 
@@ -173,18 +165,44 @@ public partial class Chunk
                     var worldPos = Directions[0] + input.Position;
                     for (int i = 0; i < 100; i++)
                     {
-                        var rand = GetSeededRandom(worldPos, ore.Value.HashId);
-                        worldPos += Directions[(int)(rand * 6f)];
+                        var randDir = Global.GetSeededRandom(worldPos, ore.Value.HashId) * 6f;
+                        worldPos += Directions[(int)randDir];
 
                         var localPos = worldPos.ToLocal(input.Chunk.ChunkPosition);
                         if (!localPos.IsInside(ChunkSize)) break;
                         if (input.CurrentBlocks[localPos.X, localPos.Y, localPos.Z] == "base:air") break;
-                        if (GetSeededRandom(worldPos, ore.Value.HashId) > chance) break;
+                        if (Global.GetSeededRandom(worldPos + worldPos, ore.Value.HashId) > chance) break;
 
                         chance -= reduct;
                         input.CurrentBlocks[localPos.X, localPos.Y, localPos.Z] = block;
                     }
                     break;
+                }
+            }
+
+            return block;
+        }
+    }
+    public class BlockGenStructures : BlockGenLayer
+    {
+        public override string Generate(ref BlockGenInput input)
+        {
+            string block = input.CurrentBlocks[input.IndexPosition.X, input.IndexPosition.Y, input.IndexPosition.Z];
+
+            var structures = input.Chunk.region.Structures.OrderBy(s => s.Priority);
+            foreach (var structure in structures)
+            {
+                if (!structure.GeneratedBlocks) continue;
+
+                var relativePos = (BlockVec3)structure.CenterPosition - input.Position;
+                var half = structure.StructureBlocksLengths / 2;
+                if (relativePos.IsInside(-half, half))
+                {
+                    var index = relativePos + half;
+                    if (structure.StructureBlocks[index.X, index.Y, index.Z] is not null)
+                    {
+                        return structure.StructureBlocks[index.X, index.Y, index.Z].FullId;
+                    }
                 }
             }
 

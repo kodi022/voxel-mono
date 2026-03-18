@@ -1,8 +1,13 @@
 [gd_resource type="Resource" script_class="BlockOre" format=3 uid="uid://dnqwx03jnsqyk"]
 
-[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resource/Block/BlockOre.cs" id="2_s5dy4"]
+[ext_resource type="Texture2D" uid="uid://br1dgx1rpsspn" path="res://Images/blocks/gem.png" id="1_tsi6v"]
+[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resources/Blocks/BlockOre.cs" id="2_s5dy4"]
 
 [resource]
 script = ExtResource("2_s5dy4")
 AmountPerChunk = 0.01
+Name = "Gemmite"
+BombResistance = 1.0
+HpRange = Vector2(20000, 25000)
+AlbedoTexture = ExtResource("1_tsi6v")
 ResourceId = "gemmite"

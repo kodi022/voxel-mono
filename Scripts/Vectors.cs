@@ -97,6 +97,22 @@ public struct BlockVec3
     /// <summary>
     /// Returns if values are within 0 and topLimit (exclusive).
     /// </summary>
+    public readonly bool IsInside(in Vector3I topLimit)
+    {
+        return topLimit.X > X && X > -1 && topLimit.Y > Y && Y > -1 && topLimit.Z > Z && Z > -1;
+    }
+
+    /// <summary>
+    /// Returns if values are within 0 and topLimit (exclusive).
+    /// </summary>
+    public readonly bool IsInside(in Vector3I bottomLimit, in Vector3I topLimit)
+    {
+        return topLimit.X > X && X > bottomLimit.X && topLimit.Y > Y && Y > bottomLimit.Y && topLimit.Z > Z && Z > bottomLimit.Z;
+    }
+
+    /// <summary>
+    /// Returns if values are within 0 and topLimit (exclusive).
+    /// </summary>
     public readonly bool IsInside(in float topLimit)
     {
         return topLimit > X && X > -1 && topLimit > Y && Y > -1 && topLimit > Z && Z > -1;

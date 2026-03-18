@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="BlockOre" format=3 uid="uid://cc5duqiw23n85"]
 
 [ext_resource type="Texture2D" uid="uid://dsa8hw88oewoc" path="res://Images/blocks/oremasks/oremask2.png" id="1_a1uu1"]
-[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resource/Block/BlockOre.cs" id="2_24dfd"]
+[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resources/Blocks/BlockOre.cs" id="2_24dfd"]
 
 [resource]
 script = ExtResource("2_24dfd")

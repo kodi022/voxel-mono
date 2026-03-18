@@ -67,9 +67,10 @@ public partial class ChunkManager : Node
 	{
 		int changedChunks = 0;
 		if (chunksToUpdate.Count > 0)
-			for (int i = 0; i < 8; i++)
+		{
+			for (int i = 0; i < 12; i++)
 			{
-				if (changedChunks > 12) break;
+				if (changedChunks > 16) break;
 				if (chunksToUpdate.Count == 0) break;
 
 				var chunkPos = chunksToUpdate[0];
@@ -83,13 +84,14 @@ public partial class ChunkManager : Node
 				}
 				chunksToUpdate.Remove(chunkPos);
 			}
+		}
 
-		if (GeneratingChunks.Count >= 16) return;
+		if (GeneratingChunks.Count >= 32) return;
 		if (chunksToSpawn.Count > 0)
 		{
-			for (int i = 0; i < 8; i++)
+			for (int i = 0; i < 12; i++)
 			{
-				if (changedChunks > 12) break;
+				if (changedChunks > 16) break;
 				if (chunksToSpawn.Count == 0) break;
 
 				var chunkPos = chunksToSpawn[0];

@@ -11,7 +11,7 @@ public partial class Region : Node3D
 	public RegionVec3 RegionPosition { get; internal set; }
 	public int RegionPositionHash { get; private set; }
 
-	public List<Structure> Structures;
+	public List<StructureInstance> Structures = [];
 	public Dictionary<int, Chunk> Chunks { get; private set; } = [];
 	//public Dictionary<int, int> ModifiedBlocks;
 
@@ -23,6 +23,30 @@ public partial class Region : Node3D
 		ready = true;
 		Name = "region_" + RegionPosition;
 		RegionPositionHash = RegionPosition.GetVecHash();
+
+		ChunkVec3 chunkPos = (ChunkVec3)RegionPosition;
+		var structures = ResourceManager.StructureRegistry.OrderBy((a) => a.Value.ChancePerChunk);
+		for (int x = 0; x < Chunk.ChunkSize; x++) for (int y = 0; y < Chunk.ChunkSize; y++) for (int z = 0; z < Chunk.ChunkSize; z++)
+		{
+			var newPos = chunkPos + new ChunkVec3(x, y, z);
+			bool add = false;
+			foreach (var structure in structures)
+			{
+				if (Global.GetSeededRandom((BlockVec3)newPos, 192478) < structure.Value.ChancePerChunk)
+				{
+					Structures.Add(new StructureInstance()
+					{
+						HashId = structure.Value.HashId,
+						Priority = structure.Value.Priority,
+						Position = newPos,
+					});
+					structure.Value.GenerateBlocks(newPos, Structures.Last());
+					add = true;
+					break;
+				}
+			}
+			if (add) continue;
+		}
 	}
 
 	public void ChunkCreate(ChunkVec3 pos)

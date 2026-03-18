@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="Block" format=3 uid="uid://bxn3mah4st0br"]
 
 [ext_resource type="Texture2D" uid="uid://qowv34jpg8sf" path="res://Images/blocks/building/brick-texture-close-up-red-masonry-photo-wallpaper-2846924434.png" id="1_3jisn"]
-[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resource/Block/Block.cs" id="2_8otjd"]
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resources/Blocks/Block.cs" id="2_8otjd"]
 
 [resource]
 script = ExtResource("2_8otjd")

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="BlockOre" format=3 uid="uid://bb1p64pifg82l"]
 
-[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resource/Block/BlockOre.cs" id="1_6ejfr"]
+[ext_resource type="Script" uid="uid://db3vg886dmc6s" path="res://Scripts/Resources/Blocks/BlockOre.cs" id="1_6ejfr"]
 [ext_resource type="Texture2D" uid="uid://b6tj50orenip" path="res://Images/blocks/oremasks/oremask1.png" id="1_tf3vp"]
 
 [resource]

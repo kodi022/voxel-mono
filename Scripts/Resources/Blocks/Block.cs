@@ -2,7 +2,7 @@ using Godot;
 
 namespace Voxel.Resource;
 
-// only necessary info for chunks
+// necessary to clone Blocks inside Chunk multithreaded
 public class BlockInstance
 {
 	public int HashId { get; set; }
