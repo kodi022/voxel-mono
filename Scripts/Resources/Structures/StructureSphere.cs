@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 
@@ -6,6 +7,9 @@ namespace Voxel.Resource;
 [GlobalClass]
 public partial class StructureSphere : Structure
 {
+	[Export]
+	public Godot.Collections.Dictionary<float, Block> Blocks;
+
 	public override async void GenerateBlocks(ChunkVec3 position, StructureInstance instance)
 	{
 		await Task.Run(async () =>
@@ -15,49 +19,31 @@ public partial class StructureSphere : Structure
 				instance.StructureBlocks[pos.X, pos.Y, pos.Z] = ResourceManager.GetBlock(blockId);
 			}
 
-			float GetRand(int offset)
-			{
-				return Global.GetSeededRandom((BlockVec3)position, offset);
-			}
-
 			instance.Position = position;
-			var sizeScales = new Vector3(GetRand(512528), GetRand(824725), GetRand(107284));
-			var sizeRand = (SizeRangeMax - SizeRangeMin) * sizeScales;
-			Vector3I size = (Vector3I)(SizeRangeMin + sizeRand);
+			var scale = GetRand((BlockVec3)position, 512528);
+			int sizeRangeRand = (int)((SizeRangeMax[0] - SizeRangeMin[0]) * scale);
+			int size = (int)SizeRangeMin[0] + sizeRangeRand;
 			var halfSize = size / 2;
+
 			instance.CenterPosition = ((BlockVec3)position) + halfSize;
+			instance.StructureBlocks = new Block[size, size, size];
+			instance.StructureBlocksLengths = new Vector3I(size, size, size);
 
-			instance.StructureBlocks = new Block[size.X, size.Y, size.Z];
-			instance.StructureBlocksLengths = new Vector3I(size.X, size.Y, size.Z);
+			var sortBlocks = Blocks.OrderBy(b => b.Key);
 
-			var farthestSqr = SizeRangeMax[(int)SizeRangeMax.MaxAxisIndex()] * sizeScales[(int)sizeScales.MaxAxisIndex()];
+			var farthestSqr = size * scale;
 			farthestSqr *= farthestSqr;
-			for (int x = 0; x < size.X; x++) for (int y = 0; y < size.Y; y++) for (int z = 0; z < size.Z; z++)
+			for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) for (int z = 0; z < size; z++)
 			{
-				var dist = (instance.Position.ToVector3Scaled() + new Vector3(x, y, z) / sizeScales).DistanceSquaredTo(instance.CenterPosition.ToVector3());
+				var dist = (instance.Position.ToVector3Scaled() + new Vector3(x, y, z) / scale).DistanceSquaredTo(instance.CenterPosition.ToVector3());
 
-				if (dist < farthestSqr * 0.01f)
+				foreach (var kvp in sortBlocks)
 				{
-					SetBlock(new Vector3I(x, y, z), "base:gemmite");
-					continue;
-				}
-
-				if (dist < farthestSqr * 0.2f)
-				{
-					SetBlock(new Vector3I(x, y, z), "base:air");
-					continue;
-				}
-
-				if (dist < farthestSqr * 0.3f)
-				{
-					SetBlock(new Vector3I(x, y, z), "base:glass");
-					continue;
-				}
-
-				if (dist < farthestSqr * 0.4f)
-				{
-					SetBlock(new Vector3I(x, y, z), "base:brick");
-					continue;
+					if (dist < farthestSqr * kvp.Key)
+					{
+						SetBlock(new Vector3I(x, y, z), kvp.Value.FullId);
+						break;
+					}
 				}
 			}
 

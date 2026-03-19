@@ -25,14 +25,13 @@ public partial class Region : Node3D
 		RegionPositionHash = RegionPosition.GetVecHash();
 
 		ChunkVec3 chunkPos = (ChunkVec3)RegionPosition;
-		var structures = ResourceManager.StructureRegistry.OrderBy((a) => a.Value.ChancePerChunk);
 		for (int x = 0; x < Chunk.ChunkSize; x++) for (int y = 0; y < Chunk.ChunkSize; y++) for (int z = 0; z < Chunk.ChunkSize; z++)
 		{
 			var newPos = chunkPos + new ChunkVec3(x, y, z);
 			bool add = false;
-			foreach (var structure in structures)
+			foreach (var structure in ResourceManager.StructureRegistry)
 			{
-				if (Global.GetSeededRandom((BlockVec3)newPos, 192478) < structure.Value.ChancePerChunk)
+				if (Global.GetSeededRandom((BlockVec3)newPos, structure.Value.HashId) < structure.Value.ChancePerChunk)
 				{
 					Structures.Add(new StructureInstance()
 					{

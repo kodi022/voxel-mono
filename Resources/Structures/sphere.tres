@@ -1,12 +1,22 @@
 [gd_resource type="Resource" script_class="StructureSphere" format=3 uid="uid://ccu5q2u2k21rs"]
 
+[ext_resource type="Resource" uid="uid://dnqwx03jnsqyk" path="res://Resources/Blocks/Ores/gemmite.tres" id="1_7sdr2"]
 [ext_resource type="Script" uid="uid://50qfkyld8iht" path="res://Scripts/Resources/Structures/StructureSphere.cs" id="1_mkktt"]
+[ext_resource type="Resource" uid="uid://b0bdstd2akgq7" path="res://Resources/Blocks/air.tres" id="2_bg657"]
+[ext_resource type="Resource" uid="uid://dlnf7mfbudeh4" path="res://Resources/Blocks/Building/glass.tres" id="3_52hk3"]
+[ext_resource type="Resource" uid="uid://bxn3mah4st0br" path="res://Resources/Blocks/Building/brick.tres" id="4_hcehg"]
 
 [resource]
 script = ExtResource("1_mkktt")
-ChancePerChunk = 0.1
-SizeRangeMin = Vector3(8, 8, 8)
-SizeRangeMax = Vector3(16, 16, 16)
+Blocks = Dictionary[float, Object]({
+0.01: ExtResource("1_7sdr2"),
+0.7: ExtResource("2_bg657"),
+0.85: ExtResource("3_52hk3"),
+1.0: ExtResource("4_hcehg")
+})
 Priority = 2
+ChancePerChunk = 0.01
+SizeRangeMin = Vector3(10, 10, 10)
+SizeRangeMax = Vector3(16, 16, 16)
 ResourceId = "sphere"
 metadata/_custom_type_script = "uid://cxcy8y0sdewcq"

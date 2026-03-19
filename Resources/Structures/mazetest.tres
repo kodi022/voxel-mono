@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="StructureMaze" format=3 uid="uid://ddawi2hq4ei52"]
+
+[ext_resource type="Script" uid="uid://c2uhmwlqoa13j" path="res://Scripts/Resources/Structures/StructureMaze.cs" id="1_yyqli"]
+
+[resource]
+script = ExtResource("1_yyqli")
+ChancePerChunk = 0.1
+SizeRangeMin = Vector3(0, 0, 0)
+SizeRangeMax = Vector3(0, 0, 0)
+ResourceId = "mazetest"
+metadata/_custom_type_script = "uid://c2uhmwlqoa13j"

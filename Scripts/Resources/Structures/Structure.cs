@@ -20,19 +20,18 @@ public class StructureInstance
 public partial class Structure : VoxelResource
 {
 	[Export]
+	public int Priority { get; set; } = 1;
+	[Export]
 	public float ChancePerChunk { get; set; } = 0.01f;
 	[Export]
 	public Vector3 SizeRangeMin { get; set; } = Vector3.One * 3;
 	[Export]
 	public Vector3 SizeRangeMax { get; set; } = Vector3.One * 10;
-	[Export]
-	public int Priority { get; set; } = 1;
 
-	public virtual async void GenerateBlocks(ChunkVec3 center, StructureInstance instance) { }
-}
+	protected static float GetRand(BlockVec3 block, int offset)
+	{
+		return Global.GetSeededRandom(block, offset);
+	}
 
-[GlobalClass]
-public partial class StructureMaze : Structure
-{
-	public override async void GenerateBlocks(ChunkVec3 center, StructureInstance instance) { }
+	public virtual async void GenerateBlocks(ChunkVec3 position, StructureInstance instance) { }
 }
