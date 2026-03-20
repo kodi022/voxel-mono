@@ -4,7 +4,8 @@
 
 [resource]
 script = ExtResource("1_yyqli")
-ChancePerChunk = 0.1
+Priority = 1
+ChancePerChunk = 0.001
 SizeRangeMin = Vector3(0, 0, 0)
 SizeRangeMax = Vector3(0, 0, 0)
 ResourceId = "mazetest"

@@ -9,23 +9,39 @@ public partial class Chunk
     public static readonly OrmMaterial3D BlockMaterial = GD.Load<OrmMaterial3D>("res://Materials/Block.tres");
     public static readonly OrmMaterial3D BlockTransMaterial = GD.Load<OrmMaterial3D>("res://Materials/Block_Trans.tres");
     public static readonly Texture2D MissingTexture = GD.Load<Texture2D>("res://Images/missing.png");
+    public static readonly Texture2D DefaultOrm = GD.Load<Texture2D>("res://Images/default_orm.png");
 
     public static readonly Vector3[][] FaceVertexOffsets =
     [
-        [new ( 1.0f, 1.0f, 0.0f), new ( 1.0f, 1.0f, 1.0f), new ( 0.0f, 1.0f, 1.0f), new ( 0.0f, 1.0f, 0.0f)],
-        [new ( 1.0f, 0.0f, 1.0f), new ( 1.0f, 0.0f, 0.0f), new ( 0.0f, 0.0f, 0.0f), new ( 0.0f, 0.0f, 1.0f)],
-        [new ( 0.0f, 1.0f, 1.0f), new ( 1.0f, 1.0f, 1.0f), new ( 1.0f, 0.0f, 1.0f), new ( 0.0f, 0.0f, 1.0f)],
-        [new ( 1.0f, 1.0f, 0.0f), new ( 0.0f, 1.0f, 0.0f), new ( 0.0f, 0.0f, 0.0f), new ( 1.0f, 0.0f, 0.0f)],
-        [new ( 1.0f, 1.0f, 1.0f), new ( 1.0f, 1.0f, 0.0f), new ( 1.0f, 0.0f, 0.0f), new ( 1.0f, 0.0f, 1.0f)],
-        [new ( 0.0f, 1.0f, 0.0f), new ( 0.0f, 1.0f, 1.0f), new ( 0.0f, 0.0f, 1.0f), new ( 0.0f, 0.0f, 0.0f)],
+        [new ( 1, 1, 0), new ( 1, 1, 1), new ( 0, 1, 1), new ( 0, 1, 0)],
+        [new ( 1, 0, 1), new ( 1, 0, 0), new ( 0, 0, 0), new ( 0, 0, 1)],
+        [new ( 0, 1, 1), new ( 1, 1, 1), new ( 1, 0, 1), new ( 0, 0, 1)],
+        [new ( 1, 1, 0), new ( 0, 1, 0), new ( 0, 0, 0), new ( 1, 0, 0)],
+        [new ( 1, 1, 1), new ( 1, 1, 0), new ( 1, 0, 0), new ( 1, 0, 1)],
+        [new ( 0, 1, 0), new ( 0, 1, 1), new ( 0, 0, 1), new ( 0, 0, 0)],
     ];
 
-    public static readonly Vector2B[] FaceUVs =
+    public static readonly Vector2B[] OneFaceUVs =
     [
-        new (0,0),
-        new (1,0),
-        new (1,1),
-        new (0,1),
+        new (0,0), new (1,0), new (1,1), new (0,1),
+    ];
+
+    public static readonly Vector2[] TwoFaceUVs =
+    [
+        new (0.0f, 0.0f), new (0.5f, 0.0f), new (0.5f, 1.0f), new (0.0f, 1.0f), // top/bottom
+        new (0.5f, 0.0f), new (1.0f, 0.0f), new (1.0f, 1.0f), new (0.5f, 1.0f), // sides
+    ];
+
+    public static readonly Vector2[] SixFaceUVs =
+    [
+        new (0.25f, 0.25f), new (0.5f, 0.25f), new (0.5f, 0.5f), new (0.25f, 0.5f), // up
+        new (0.25f, 0.75f), new (0.5f, 0.75f), new (0.5f, 1.0f), new (0.25f, 1.0f), // down
+
+        new (0.0f, 0.5f), new (0.25f, 0.5f), new (0.25f, 0.75f), new (0.0f, 0.75f), // left
+        new (0.5f, 0.5f), new (0.75f, 0.5f), new (0.75f, 0.75f), new (0.5f, 0.75f), // right
+
+        new (0.25f, 0.5f), new (0.5f, 0.5f), new (0.5f, 0.75f), new (0.25f, 0.75f), // forward
+        new (0.75f, 0.5f), new (1.0f, 0.5f), new (1.0f, 0.75f), new (0.75f, 0.75f), // backward
     ];
 
     private static readonly Dictionary<int, Material> blockMaterials = [];
@@ -119,6 +135,7 @@ public partial class Chunk
 
             // GD.Print($"--{WorldPosition}: {blockSurfaceKVP.Key}");
 
+            var block = ResourceManager.GetBlock(blockSurfaceKVP.Key);
             foreach (var lodPosKVP in blockSurfaceKVP.Value)
             {
                 var blockSize = (sbyte)Mathf.Pow(2, lodPosKVP.Key);
@@ -128,12 +145,37 @@ public partial class Chunk
                     int x = pos.X, y = pos.Y, z = pos.Z, w = pos.W;
 
                     // mesh verts
-                    for (int v = 0; v < 4; v++)
+                    switch (block.BlockTextureUV)
                     {
-                        var off = FaceVertexOffsets[w][v] * blockSize;
-                        meshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
-                        normals.Add(Directions[w]);
-                        uvs.Add((Vector2)FaceUVs[v] * blockSize);
+                        case Resource.Block.BlockTextureUVEnum.OneFaceUV:
+                            for (int v = 0; v < 4; v++)
+                            {
+                                var off = FaceVertexOffsets[w][v] * blockSize;
+                                meshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                                normals.Add(Directions[w]);
+                                uvs.Add((Vector2)OneFaceUVs[v] * blockSize);
+                            }
+                            break;
+                        case Resource.Block.BlockTextureUVEnum.TwoFacesUV:
+                            var indexOffset = w < 2 ? 0 : 4;
+                            for (int v = 0; v < 4; v++)
+                            {
+                                var off = FaceVertexOffsets[w][v] * blockSize;
+                                meshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                                normals.Add(Directions[w]);
+                                uvs.Add(TwoFaceUVs[indexOffset + v] * blockSize);
+                            }
+                            break;
+                        case Resource.Block.BlockTextureUVEnum.SixFacesUV:
+                            var indexOffset2 = w * 4;
+                            for (int v = 0; v < 4; v++)
+                            {
+                                var off = FaceVertexOffsets[w][v] * blockSize;
+                                meshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+                                normals.Add(Directions[w]);
+                                uvs.Add(SixFaceUVs[indexOffset2 + v] * blockSize);
+                            }
+                            break;
                     }
 
                     // phys verts
@@ -212,17 +254,17 @@ public partial class Chunk
                 {
                     mat = (OrmMaterial3D)BlockMaterial.Duplicate();
                     ((OrmMaterial3D)mat).AlbedoColor = block.ColorTint;
-                    ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture);
-                    ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture);
-                    ((OrmMaterial3D)mat).EmissionTexture = SetTextureFromBlock(block.EmissionTexture);
+                    ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture, MissingTexture);
+                    ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture, MissingTexture);
+                    ((OrmMaterial3D)mat).OrmTexture = SetTextureFromBlock(block.OrmTexture, DefaultOrm);
                 }
                 else if (block.BlockMaterial == Resource.Block.BlockMaterialEnum.Transparent)
                 {
                     mat = (OrmMaterial3D)BlockTransMaterial.Duplicate();
                     ((OrmMaterial3D)mat).AlbedoColor = block.ColorTint;
-                    ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture);
-                    ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture);
-                    ((OrmMaterial3D)mat).EmissionTexture = SetTextureFromBlock(block.EmissionTexture);
+                    ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture, MissingTexture);
+                    ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture, MissingTexture);
+                    ((OrmMaterial3D)mat).OrmTexture = SetTextureFromBlock(block.OrmTexture, DefaultOrm);
                 }
                 else
                 {
@@ -256,9 +298,9 @@ public partial class Chunk
         PhysicsServer3D.BodySetSpace(physicsMeshInstance, world3D.Space);
     }
 
-    private static Texture2D SetTextureFromBlock(Texture2D resourceTexture)
+    private static Texture2D SetTextureFromBlock(Texture2D resourceTexture, Texture2D errTexture)
     {
         if (resourceTexture is not null) return resourceTexture;
-        return MissingTexture;
+        return errTexture;
     }
 }

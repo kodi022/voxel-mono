@@ -48,9 +48,17 @@ public partial class Block : VoxelResource
 	public enum BlockDirectionsEnum
 	{
 		None,
-		Horizontal,
-		Vertical,
-		HorizonalAndVertical,
+		Yaw, // block has yaw directions
+		Pitch, // block has pitch directions
+		YawAndPitch, // block has pitch and yaw directions
+	}
+
+	public enum BlockTextureUVEnum
+	{
+		OneFaceUV, // 32x32 texture
+		TwoFacesUV, // 64x32 texture top/side
+		SixFacesUV, // 128x128 texture block uv
+		Custom, // set each face manually
 	}
 
 	public enum BlockModelEnum
@@ -105,6 +113,9 @@ public partial class Block : VoxelResource
 	public BlockCullEnum BlockCull { get; set; } = BlockCullEnum.Opaque;
 
 	[Export, ExportGroup("Visual")]
+	public BlockTextureUVEnum BlockTextureUV { get; set; } = BlockTextureUVEnum.OneFaceUV;
+
+	[Export, ExportGroup("Visual")]
 	public BlockModelEnum BlockModel { get; set; } = BlockModelEnum.Default;
 
 	[Export, ExportSubgroup("Model.Custom")]
@@ -116,12 +127,12 @@ public partial class Block : VoxelResource
 	// default material
 	[Export, ExportSubgroup("Material.Default Material.Transparent")]
 	public Color ColorTint { get; set; } = Color.Color8(255, 255, 255);
-	[Export]
-	public Texture2D AlbedoTexture { get; set; }
+	[Export(hintString: "Uses alpha channel if Material.Transparent")]
+	public Texture2D AlbedoTexture { get; set; } // uses alpha channel if Material.Transparent
 	[Export]
 	public Texture2D NormalTexture { get; set; }
 	[Export]
-	public Texture2D EmissionTexture { get; set; }
+	public Texture2D OrmTexture { get; set; }
 
 	// custom material
 	[Export, ExportSubgroup("Material.Custom")]

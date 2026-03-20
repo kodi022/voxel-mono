@@ -194,7 +194,7 @@ public partial class Chunk
             {
                 if (!structure.GeneratedBlocks) continue;
 
-                var relativePos = (BlockVec3)structure.CenterPosition - input.Position;
+                var relativePos = structure.CenterPosition - input.Position;
                 var half = structure.StructureBlocksLengths / 2;
                 if (relativePos.IsInside(-half, half))
                 {

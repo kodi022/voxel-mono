@@ -22,6 +22,7 @@ public partial class Player : CharacterBody3D, IPawn
 
 	// may be null
 	public Chunk WithinChunk { get; private set; }
+	public bool AimHitting { get; private set; }
 	public Vector3 AimHitPosition { get; private set; }
 	public BlockVec3 AimBlockPosition { get; private set; }
 	public BlockVec3 AimBlockFrontPosition { get; private set; }
@@ -57,6 +58,7 @@ public partial class Player : CharacterBody3D, IPawn
 		FrameTraceResult = GetWorld3D().DirectSpaceState.IntersectRay(query);
 		if (FrameTraceResult.TryGetValue("position", out Variant position))
 		{
+			AimHitting = true;
 			AimHitPosition = (Vector3)position;
 			AimBlockPosition = BlockVec3.FromVector3(AimHitPosition - (Vector3)FrameTraceResult["normal"] * 0.5f);
 			AimBlockFrontPosition = BlockVec3.FromVector3(AimHitPosition + (Vector3)FrameTraceResult["normal"] * 0.5f);
@@ -64,8 +66,10 @@ public partial class Player : CharacterBody3D, IPawn
 		}
 		else
 		{
+			AimHitting = false;
 			AimHitPosition = Vector3.Zero;
 			AimBlockPosition = BlockVec3.Zero;
+			AimBlockFrontPosition = BlockVec3.Zero;
 			Selector.GlobalPosition = Camera3D.GetForwardPosition(-100f);
 		}
 

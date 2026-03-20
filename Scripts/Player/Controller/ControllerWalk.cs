@@ -79,6 +79,8 @@ public class ControllerWalk : Controller
 
         if (@event is InputEventMouseButton buttonEvent && buttonEvent.Pressed)
         {
+            if (!player.AimHitting) return;
+
             switch (buttonEvent.ButtonIndex)
             {
                 case MouseButton.Left:
@@ -99,7 +101,7 @@ public class ControllerWalk : Controller
                         }
                         else
                         {
-                            Chunk.ChunkPlaceBlock(player.AimBlockFrontPosition, "base:glass");
+                            Chunk.ChunkPlaceBlock(player.AimBlockFrontPosition, "base:debugtwoface");
                         }
                     }
                     break;

@@ -8,43 +8,39 @@ namespace Voxel.Resource;
 public partial class StructureSphere : Structure
 {
 	[Export]
-	public Godot.Collections.Dictionary<float, Block> Blocks;
+	public Block CenterBlock;
+	[Export]
+	public Godot.Collections.Dictionary<float, Block> BlockLayers;
 
-	public override async void GenerateBlocks(ChunkVec3 position, StructureInstance instance)
+	public override async void GenerateBlocks(StructureInstance instance, ChunkVec3 position)
 	{
 		await Task.Run(async () =>
 		{
-			void SetBlock(Vector3I pos, string blockId)
-			{
-				instance.StructureBlocks[pos.X, pos.Y, pos.Z] = ResourceManager.GetBlock(blockId);
-			}
+			SetValuesSingleScale(instance, position, 512528);
 
-			instance.Position = position;
-			var scale = GetRand((BlockVec3)position, 512528);
-			int sizeRangeRand = (int)((SizeRangeMax[0] - SizeRangeMin[0]) * scale);
-			int size = (int)SizeRangeMin[0] + sizeRangeRand;
-			var halfSize = size / 2;
+			var sortBlocks = BlockLayers.OrderBy(b => b.Key);
+			var size = instance.StructureBlocksLengths.X;
 
-			instance.CenterPosition = ((BlockVec3)position) + halfSize;
-			instance.StructureBlocks = new Block[size, size, size];
-			instance.StructureBlocksLengths = new Vector3I(size, size, size);
-
-			var sortBlocks = Blocks.OrderBy(b => b.Key);
-
-			var farthestSqr = size * scale;
-			farthestSqr *= farthestSqr;
+			var farthestSqr = size;
 			for (int x = 0; x < size; x++) for (int y = 0; y < size; y++) for (int z = 0; z < size; z++)
 			{
-				var dist = (instance.Position.ToVector3Scaled() + new Vector3(x, y, z) / scale).DistanceSquaredTo(instance.CenterPosition.ToVector3());
+				var currentPos = instance.Position.ToVector3Scaled() + new Vector3(x, y, z);
+				var dist = currentPos.DistanceSquaredTo(instance.CenterPosition.ToVector3());
 
 				foreach (var kvp in sortBlocks)
 				{
 					if (dist < farthestSqr * kvp.Key)
 					{
-						SetBlock(new Vector3I(x, y, z), kvp.Value.FullId);
+						instance.StructureBlocks[x, y, z] = kvp.Value;
 						break;
 					}
 				}
+			}
+
+			if (CenterBlock is not null)
+			{
+				var localCenter = instance.CenterPosition - instance.Position.ToVector3Scaled();
+				instance.StructureBlocks[localCenter.X, localCenter.Y, localCenter.Z] = CenterBlock;
 			}
 
 			instance.GeneratedBlocks = true;

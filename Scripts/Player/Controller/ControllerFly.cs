@@ -35,6 +35,8 @@ public class ControllerFly : Controller
 
         if (@event is InputEventMouseButton buttonEvent && buttonEvent.Pressed)
         {
+            if (!player.AimHitting) return;
+
             switch (buttonEvent.ButtonIndex)
             {
                 case MouseButton.Left:

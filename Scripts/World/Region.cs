@@ -33,19 +33,16 @@ public partial class Region : Node3D
 			{
 				if (Global.GetSeededRandom((BlockVec3)newPos, structure.Value.HashId) < structure.Value.ChancePerChunk)
 				{
-					Structures.Add(new StructureInstance()
-					{
-						HashId = structure.Value.HashId,
-						Priority = structure.Value.Priority,
-						Position = newPos,
-					});
-					structure.Value.GenerateBlocks(newPos, Structures.Last());
+					Structures.Add(new StructureInstance(structure.Value.HashId, structure.Value.FullId, structure.Value.Priority, newPos));
+					structure.Value.GenerateBlocks(Structures.Last(), newPos);
 					add = true;
 					break;
 				}
 			}
 			if (add) continue;
 		}
+
+		GD.Print(Structures.Count);
 	}
 
 	public void ChunkCreate(ChunkVec3 pos)

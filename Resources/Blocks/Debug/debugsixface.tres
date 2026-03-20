@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Block" format=3 uid="uid://dp2y4pgbp5bap"]
+
+[ext_resource type="Texture2D" uid="uid://cdyxhvw7e3am2" path="res://Images/debug/debugsixface_albedo.png" id="1_3cpv7"]
+[ext_resource type="Script" uid="uid://bbj4wx4ucdjpo" path="res://Scripts/Resources/Blocks/Block.cs" id="1_48uhf"]
+[ext_resource type="Texture2D" uid="uid://c7uhvlxtnb2x7" path="res://Images/debug/debugsixface_normal.png" id="2_ltugi"]
+[ext_resource type="Texture2D" uid="uid://bg64v87wc8j4q" path="res://Images/debug/debugsixface_orm.png" id="3_m722j"]
+
+[resource]
+script = ExtResource("1_48uhf")
+Name = "DebugSixFace"
+BlockTextureUV = 2
+AlbedoTexture = ExtResource("1_3cpv7")
+NormalTexture = ExtResource("2_ltugi")
+OrmTexture = ExtResource("3_m722j")
+ResourceId = "debugsixface"
+metadata/_custom_type_script = "uid://bbj4wx4ucdjpo"
