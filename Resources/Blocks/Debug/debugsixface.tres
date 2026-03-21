@@ -8,6 +8,7 @@
 [resource]
 script = ExtResource("1_48uhf")
 Name = "DebugSixFace"
+BlockDirections = 3
 BlockTextureUV = 2
 AlbedoTexture = ExtResource("1_3cpv7")
 NormalTexture = ExtResource("2_ltugi")

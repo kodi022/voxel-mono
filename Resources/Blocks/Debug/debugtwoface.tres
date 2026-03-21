@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("4_vqjgj")
 Name = "DebugTwoFace"
+BlockDirections = 1
 BlockTextureUV = 1
 AlbedoTexture = ExtResource("1_o5k3h")
 ResourceId = "debugtwoface"

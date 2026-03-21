@@ -10,7 +10,6 @@ public partial class ChunkManager : Node
 	public static ChunkManager Current { get; private set; }
 	public static int Seed { get; set; } = 5000;
 
-
 	public static Dictionary<int, Region> Regions { get; private set; } = [];
 
 	public static List<int> GeneratingChunks { get; private set; } = [];
@@ -86,12 +85,11 @@ public partial class ChunkManager : Node
 			}
 		}
 
-		if (GeneratingChunks.Count >= 32) return;
+		if (GeneratingChunks.Count >= 128) return;
 		if (chunksToSpawn.Count > 0)
 		{
 			for (int i = 0; i < 12; i++)
 			{
-				if (changedChunks > 16) break;
 				if (chunksToSpawn.Count == 0) break;
 
 				var chunkPos = chunksToSpawn[0];

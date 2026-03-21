@@ -48,7 +48,7 @@ public partial class Chunk
         List<BlockGenLayer> layers = [
             new BlockGenLayerBase(),
             new BlockGenLayerOre(),
-            new BlockGenStructures(),
+            new BlockGenLayerStructures(),
             new BlockGenLayerEdge()
         ];
 
@@ -79,11 +79,11 @@ public partial class Chunk
                 {
                     var block = ResourceManager.GetBlockInstance(tempBlocks[x, y, z]);
                     Blocks[x, y, z] = block;
-                    if (block != 0 && !block.Unbreakable)
+                    if (block != 0 && !block.BlockInfo.Unbreakable)
                     {
-                        var blockHpSize = block.HpRange.Y - block.HpRange.X;
+                        var blockHpSize = block.BlockInfo.HpRange.Y - block.BlockInfo.HpRange.X;
                         var halfBlockHpSize = blockHpSize * 0.5f;
-                        Blocks[x, y, z].Hp = (noise.GetNoise3D(x, y, z) * halfBlockHpSize) + block.HpRange.X + halfBlockHpSize;
+                        Blocks[x, y, z].Hp = (noise.GetNoise3D(x, y, z) * halfBlockHpSize) + block.BlockInfo.HpRange.X + halfBlockHpSize;
                     }
                 }
             }
@@ -183,7 +183,7 @@ public partial class Chunk
             return block;
         }
     }
-    public class BlockGenStructures : BlockGenLayer
+    public class BlockGenLayerStructures : BlockGenLayer
     {
         public override string Generate(ref BlockGenInput input)
         {

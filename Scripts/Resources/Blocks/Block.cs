@@ -1,28 +1,25 @@
 using Godot;
+using Voxel.World;
 
 namespace Voxel.Resource;
 
 // necessary to clone Blocks inside Chunk multithreaded
-public class BlockInstance
+public class BlockInstance(in Block self)
 {
-	public int HashId { get; set; }
+	public readonly Block BlockInfo = self;
 
-	public string Name { get; set; }
-	public Block.BlockDirectionsEnum BlockDirections { get; set; }
-	public bool Unbreakable { get; set; }
-	public bool InvulnerableLava { get; set; }
-	public float BombResistance { get; set; }
-
-	public Vector2 HpRange { get; set; }
-
+	// network these
 	public float Hp;
+	public int DirYaw;
+	public int DirPitch;
+	public Block.BlockShapeEnum Shape;
 
-	public static bool operator ==(BlockInstance self, int hashId) => self.HashId == hashId;
-	public static bool operator !=(BlockInstance self, int hashId) => self.HashId != hashId;
-	public static bool operator ==(BlockInstance self, string blockId) => self.HashId == ResourceManager.GetBlock(blockId).HashId;
-	public static bool operator !=(BlockInstance self, string blockId) => self.HashId != ResourceManager.GetBlock(blockId).HashId;
-	public static bool operator ==(BlockInstance left, BlockInstance right) => left.HashId == right.HashId;
-	public static bool operator !=(BlockInstance left, BlockInstance right) => left.HashId != right.HashId;
+	public static bool operator ==(BlockInstance self, int hashId) => self.BlockInfo.HashId == hashId;
+	public static bool operator !=(BlockInstance self, int hashId) => self.BlockInfo.HashId != hashId;
+	public static bool operator ==(BlockInstance self, string blockId) => self.BlockInfo.HashId == ResourceManager.GetBlock(blockId).HashId;
+	public static bool operator !=(BlockInstance self, string blockId) => self.BlockInfo.HashId != ResourceManager.GetBlock(blockId).HashId;
+	public static bool operator ==(BlockInstance left, BlockInstance right) => left.BlockInfo.HashId == right.BlockInfo.HashId;
+	public static bool operator !=(BlockInstance left, BlockInstance right) => left.BlockInfo.HashId != right.BlockInfo.HashId;
 
 	public static explicit operator BlockInstance(string blockId)
 	{
@@ -58,13 +55,20 @@ public partial class Block : VoxelResource
 		OneFaceUV, // 32x32 texture
 		TwoFacesUV, // 64x32 texture top/side
 		SixFacesUV, // 128x128 texture block uv
-		Custom, // set each face manually
+		Custom, // set each face manually (tbd)
 	}
 
 	public enum BlockModelEnum
 	{
 		Default,
 		Custom,
+	}
+
+	public enum BlockShapeEnum
+	{
+		Block,
+		Stair,
+		Slab,
 	}
 
 	public enum BlockMaterialEnum
@@ -87,8 +91,8 @@ public partial class Block : VoxelResource
 	public static bool operator !=(Block self, string blockId) => self.HashId != ResourceManager.GetBlock(blockId).HashId;
 	public static bool operator ==(Block left, Block right) => left.HashId == right.HashId;
 	public static bool operator !=(Block left, Block right) => left.HashId != right.HashId;
-	public static bool operator ==(Block left, BlockInstance right) => left.HashId == right.HashId;
-	public static bool operator !=(Block left, BlockInstance right) => left.HashId != right.HashId;
+	public static bool operator ==(Block left, BlockInstance right) => left.HashId == right.BlockInfo.HashId;
+	public static bool operator !=(Block left, BlockInstance right) => left.HashId != right.BlockInfo.HashId;
 
 	[Export, ExportGroup("Identity")]
 	public string Name { get; set; } = "";
@@ -138,12 +142,15 @@ public partial class Block : VoxelResource
 	[Export, ExportSubgroup("Material.Custom")]
 	public Material CustomMaterial { get; set; }
 
-	// OnBreak (add export with choice on what block to replace, default air 0)
-	// OnLavaConsume (lava tries to consume)
+	public BlockInstance MakeInstance()
+	{
+		return new BlockInstance(this);
+	}
 
 	public virtual void OnHit(DamageInfo info)
 	{
-		if (info.Damage * 100 < info.BlockInstance.HpRange.Y) return;
+		var block = ResourceManager.GetBlock(info.BlockInstance.BlockInfo.HashId);
+		if (info.Damage * 100 < block.HpRange.Y) return;
 
 		if (info.BlockInstance.Hp < info.Damage)
 		{
@@ -170,19 +177,113 @@ public partial class Block : VoxelResource
 	{
 	}
 
-	public BlockInstance MakeInstance()
+	public virtual void OnLavaTouch(DamageInfo info)
 	{
-		return new BlockInstance()
-		{
-			HashId = HashId,
-			Name = Name,
-			BlockDirections = BlockDirections,
-			Unbreakable = Unbreakable,
-			InvulnerableLava = InvulnerableLava,
-			BombResistance = BombResistance,
-			HpRange = HpRange
-		};
+		// should consume by lava or not?
 	}
+
+
+	public virtual void GenerateProceduralMesh(ref Chunk.MeshGenerationData data)
+	{
+		if (data.Lod == 0)
+		{
+			switch (data.BlockInstance.Shape)
+			{
+				case BlockShapeEnum.Block:
+					ProceduralBlockMesh(ref data);
+					break;
+				case BlockShapeEnum.Stair:
+					ProceduralStairMesh(ref data);
+					break;
+				case BlockShapeEnum.Slab:
+					ProceduralSlabMesh(ref data);
+					break;
+			}
+		}
+		else
+		{
+			ProceduralBlockMesh(ref data);
+		}
+	}
+
+	private void ProceduralBlockMesh(ref Chunk.MeshGenerationData data)
+	{
+		var blockSize = (sbyte)Mathf.Pow(2, data.Lod);
+		int x = data.PosDir.X, y = data.PosDir.Y, z = data.PosDir.Z, w = data.PosDir.W;
+
+		// mesh verts
+		switch (BlockTextureUV)
+		{
+			case BlockTextureUVEnum.OneFaceUV:
+				for (int v = 0; v < 4; v++)
+				{
+					var off = Chunk.FaceVertexOffsets[w][v] * blockSize;
+					data.MeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+					data.Normals.Add(Chunk.Directions[w]);
+					data.Uvs.Add((Vector2)Chunk.OneFaceUVs[v] * blockSize);
+				}
+				break;
+			case BlockTextureUVEnum.TwoFacesUV:
+				var indexOffset = w < 2 ? 0 : 4;
+				//if (block.BlockDirections != )
+				for (int v = 0; v < 4; v++)
+				{
+					var off = Chunk.FaceVertexOffsets[w][v] * blockSize;
+					data.MeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+					data.Normals.Add(Chunk.Directions[w]);
+					data.Uvs.Add(Chunk.TwoFaceUVs[indexOffset + v] * blockSize);
+				}
+				break;
+			case BlockTextureUVEnum.SixFacesUV:
+				var indexOffset2 = w * 4;
+				for (int v = 0; v < 4; v++)
+				{
+					var off = Chunk.FaceVertexOffsets[w][v] * blockSize;
+					data.MeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+					data.Normals.Add(Chunk.Directions[w]);
+					data.Uvs.Add(Chunk.SixFaceUVs[indexOffset2 + v] * blockSize);
+				}
+				break;
+		}
+
+		var o = data.FaceCount * 4;
+		data.CurrentLodIndices.AddRange([
+			o, o + 1, o + 2,
+			o + 2, o + 3, o
+		]);
+		data.FaceCount++;
+	}
+
+	private void ProceduralStairMesh(ref Chunk.MeshGenerationData data)
+	{
+
+	}
+
+	private void ProceduralSlabMesh(ref Chunk.MeshGenerationData data)
+	{
+
+	}
+
+	public virtual void GenerateProceduralPhysicsMesh(ref Chunk.MeshPhysicsGenerationData data)
+	{
+		if (data.Lod > 0) return;
+
+		int x = data.PosDir.X, y = data.PosDir.Y, z = data.PosDir.Z, w = data.PosDir.W;
+
+		var off = Chunk.FaceVertexOffsets[w][0];
+		data.PhysMeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+		off = Chunk.FaceVertexOffsets[w][1];
+		data.PhysMeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+		off = Chunk.FaceVertexOffsets[w][2];
+		data.PhysMeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+		off = Chunk.FaceVertexOffsets[w][2];
+		data.PhysMeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+		off = Chunk.FaceVertexOffsets[w][3];
+		data.PhysMeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+		off = Chunk.FaceVertexOffsets[w][0];
+		data.PhysMeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
+	}
+
 
 	// required for == and =! operators
 	public override bool Equals(object obj)

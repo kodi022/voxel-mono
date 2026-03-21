@@ -23,7 +23,7 @@ public partial class HUD : Panel
 		var block = Chunk.ChunkSelectBlock(Player.Self.AimBlockPosition);
 		if (block is not null)
 		{
-			HealthLabel.Text = $"{block.Hp:0.0} {block.Name}";
+			HealthLabel.Text = $"{block.Hp:0.0} {block.BlockInfo.Name}";
 		}
 		else
 		{

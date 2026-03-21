@@ -57,6 +57,9 @@ public partial class Chunk
 
         if (GeneratedPhysicsMesh)
             PhysicsServer3D.FreeRid(physicsMeshInstance);
+
+        noise.Dispose();
+        noise = null;
     }
 
     public void EnableSimulation()
@@ -103,8 +106,8 @@ public partial class Chunk
             if (!locPos.IsInside(ChunkSize)) continue;
 
             var block = Blocks[locPos.X, locPos.Y, locPos.Z];
-            if (blockId == "base:air") if (block == 0 || block.Unbreakable) continue;
-            else if (block.Unbreakable) continue;
+            if (blockId == "base:air") if (block == 0 || block.BlockInfo.Unbreakable) continue;
+            else if (block.BlockInfo.Unbreakable) continue;
 
             if (locPos.X == ChunkSize - 1) neighborUpdate.Add(ChunkPosition + neighborOffset[0]);
             if (locPos.X == 0) neighborUpdate.Add(ChunkPosition + neighborOffset[1]);
@@ -114,7 +117,7 @@ public partial class Chunk
             if (locPos.Z == 0) neighborUpdate.Add(ChunkPosition + neighborOffset[5]);
 
             Blocks[locPos.X, locPos.Y, locPos.Z] = (BlockInstance)blockId;
-            Blocks[locPos.X, locPos.Y, locPos.Z].Hp = Blocks[locPos.X, locPos.Y, locPos.Z].HpRange.Y;
+            Blocks[locPos.X, locPos.Y, locPos.Z].Hp = Blocks[locPos.X, locPos.Y, locPos.Z].BlockInfo.HpRange.Y;
             change = true;
         }
 
@@ -140,13 +143,13 @@ public partial class Chunk
         if (!pos.IsInside(ChunkSize)) return;
 
         var block = Blocks[pos.X, pos.Y, pos.Z];
-        if (blockId == "base:air") if (block == 0 || block.Unbreakable) return;
-        else if (block.Unbreakable) return;
+        if (blockId == "base:air") if (block == 0 || block.BlockInfo.Unbreakable) return;
+        else if (block.BlockInfo.Unbreakable) return;
 
         if (block != blockId)
         {
             Blocks[pos.X, pos.Y, pos.Z] = (BlockInstance)blockId;
-            Blocks[pos.X, pos.Y, pos.Z].Hp = Blocks[pos.X, pos.Y, pos.Z].HpRange.Y;
+            Blocks[pos.X, pos.Y, pos.Z].Hp = Blocks[pos.X, pos.Y, pos.Z].BlockInfo.HpRange.Y;
 
             if (pos.X == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[0]);
             if (pos.X == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[1]);
@@ -168,7 +171,7 @@ public partial class Chunk
 
         var block = Blocks[pos.X, pos.Y, pos.Z];
         if (block is null) return null;
-        if (block == 0 || block.Unbreakable) return null;
+        if (block == 0 || block.BlockInfo.Unbreakable) return null;
 
         return Blocks[pos.X, pos.Y, pos.Z];
     }
