@@ -19,22 +19,6 @@ public partial class Chunk
         new (-1,  0,  0),
     ];
 
-    // noise per chunk because static noises collide with chunk multithreading
-    private FastNoiseLite noise = new();
-
-    // ! make noise settings struct
-    FastNoiseLite SetNoiseSettings(int seedOffset, FastNoiseLite.NoiseTypeEnum noiseType, float frequency = 1f, float warpAmplitude = 0f)
-    {
-        bool warpEnabled = warpAmplitude != 0;
-        noise.Seed = ChunkManager.Seed + (seedOffset % 10);
-        noise.NoiseType = noiseType;
-        noise.Frequency = frequency;
-        noise.DomainWarpEnabled = warpEnabled;
-        noise.DomainWarpAmplitude = warpAmplitude;
-        noise.DomainWarpType = FastNoiseLite.DomainWarpTypeEnum.BasicGrid;
-        return noise;
-    }
-
     public Task GenerateBlockData()
     {
         // ! string bad replace with id or something later
@@ -83,7 +67,9 @@ public partial class Chunk
                     {
                         var blockHpSize = block.BlockInfo.HpRange.Y - block.BlockInfo.HpRange.X;
                         var halfBlockHpSize = blockHpSize * 0.5f;
-                        Blocks[x, y, z].Hp = (noise.GetNoise3D(x, y, z) * halfBlockHpSize) + block.BlockInfo.HpRange.X + halfBlockHpSize;
+                        var hp = (noise.GetNoise3D(x, y, z) * halfBlockHpSize) + block.BlockInfo.HpRange.X + halfBlockHpSize;
+                        Blocks[x, y, z].Hp = hp;
+                        Blocks[x, y, z].GeneratedMaxHp = hp;
                     }
                 }
             }

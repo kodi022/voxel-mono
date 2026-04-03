@@ -78,7 +78,13 @@ public partial class Chunk
 
     // * modifying blocks
 
-    public static void ChunkMineBlock(in BlockVec3 pos)
+    public static void ChunkHitBlock(in DamageInfo info)
+    {
+        var chunk = ChunkManager.FindChunk((ChunkVec3)info.BlockPosition);
+        chunk?.HitBlock(info);
+    }
+
+    public static void ChunkBreakBlock(in BlockVec3 pos)
     {
         var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
         chunk?.SetBlock(pos, "base:air");
@@ -94,6 +100,46 @@ public partial class Chunk
     {
         var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
         return chunk?.GetBlock(pos);
+    }
+
+    public void HitBlock(DamageInfo info)
+    {
+        var pos = info.BlockPosition.ToLocal(ChunkPosition);
+        if (!pos.IsInside(ChunkSize)) return;
+
+        var block = Blocks[pos.X, pos.Y, pos.Z];
+        if (block.BlockInfo == 0 || block.BlockInfo.Unbreakable) return;
+
+        info.BlockInstance = block;
+        info.Chunk = this;
+        Blocks[pos.X, pos.Y, pos.Z].BlockInfo.OnHit(info);
+    }
+
+    public void SetBlock(BlockVec3 pos, in string blockId)
+    {
+        pos = pos.ToLocal(ChunkPosition);
+        if (!pos.IsInside(ChunkSize)) return;
+
+        var block = Blocks[pos.X, pos.Y, pos.Z];
+        if (blockId == "base:air") if (block == 0 || block.BlockInfo.Unbreakable) return;
+        else if (block.BlockInfo.Unbreakable) return;
+
+        if (block != blockId)
+        {
+            Blocks[pos.X, pos.Y, pos.Z] = (BlockInstance)blockId;
+            var hp = Blocks[pos.X, pos.Y, pos.Z].BlockInfo.HpRange.Y;
+            Blocks[pos.X, pos.Y, pos.Z].Hp = hp;
+            Blocks[pos.X, pos.Y, pos.Z].GeneratedMaxHp = hp;
+
+            if (pos.X == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[0]);
+            if (pos.X == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[1]);
+            if (pos.Y == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[2]);
+            if (pos.Y == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[3]);
+            if (pos.Z == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[4]);
+            if (pos.Z == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[5]);
+
+            ChunkManager.UpdateChunk(ChunkPosition);
+        }
     }
 
     public void SetBlocks(in BlockVec3[] poss, in string blockId)
@@ -117,7 +163,9 @@ public partial class Chunk
             if (locPos.Z == 0) neighborUpdate.Add(ChunkPosition + neighborOffset[5]);
 
             Blocks[locPos.X, locPos.Y, locPos.Z] = (BlockInstance)blockId;
-            Blocks[locPos.X, locPos.Y, locPos.Z].Hp = Blocks[locPos.X, locPos.Y, locPos.Z].BlockInfo.HpRange.Y;
+            var hp = Blocks[locPos.X, locPos.Y, locPos.Z].BlockInfo.HpRange.Y;
+            Blocks[locPos.X, locPos.Y, locPos.Z].Hp = hp;
+            Blocks[locPos.X, locPos.Y, locPos.Z].GeneratedMaxHp = hp;
             change = true;
         }
 
@@ -134,31 +182,6 @@ public partial class Chunk
                     neighborUpdated.Add(pos);
                 }
             }
-        }
-    }
-
-    public void SetBlock(BlockVec3 pos, in string blockId)
-    {
-        pos = pos.ToLocal(ChunkPosition);
-        if (!pos.IsInside(ChunkSize)) return;
-
-        var block = Blocks[pos.X, pos.Y, pos.Z];
-        if (blockId == "base:air") if (block == 0 || block.BlockInfo.Unbreakable) return;
-        else if (block.BlockInfo.Unbreakable) return;
-
-        if (block != blockId)
-        {
-            Blocks[pos.X, pos.Y, pos.Z] = (BlockInstance)blockId;
-            Blocks[pos.X, pos.Y, pos.Z].Hp = Blocks[pos.X, pos.Y, pos.Z].BlockInfo.HpRange.Y;
-
-            if (pos.X == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[0]);
-            if (pos.X == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[1]);
-            if (pos.Y == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[2]);
-            if (pos.Y == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[3]);
-            if (pos.Z == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[4]);
-            if (pos.Z == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[5]);
-
-            ChunkManager.UpdateChunk(ChunkPosition);
         }
     }
 

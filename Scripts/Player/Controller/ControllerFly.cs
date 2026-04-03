@@ -40,7 +40,7 @@ public class ControllerFly : Controller
             switch (buttonEvent.ButtonIndex)
             {
                 case MouseButton.Left:
-                    Chunk.ChunkMineBlock(player.AimBlockPosition);
+                    Chunk.ChunkBreakBlock(player.AimBlockPosition);
                     break;
                 case MouseButton.Right:
                     if (buttonEvent.CtrlPressed)

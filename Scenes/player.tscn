@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bda06j6bffxus" path="res://Scripts/Player/Player.cs" id="1_v0iea"]
 [ext_resource type="Script" uid="uid://c0crxpquoog05" path="res://Scripts/UI/HUD.cs" id="2_cvnsp"]
+[ext_resource type="PackedScene" uid="uid://dcng8pgxgxnf8" path="res://Models/drill.blend" id="2_vgqql"]
 [ext_resource type="LabelSettings" uid="uid://oti5e0ne4yea" path="res://Resources/LabelSettings/HUDInfo.tres" id="3_6t5aa"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_f60y1"]
@@ -25,6 +26,33 @@ corner_radius_top_left = 5
 corner_radius_top_right = 5
 corner_radius_bottom_right = 5
 corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vgqql"]
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fkybt"]
+bg_color = Color(0.9591208, 0.37730026, 0.42390397, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_x3wgy"]
+bg_color = Color(0.88235295, 0.4509804, 0.49803922, 0)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.24180749, 0.00049690186, 0.38031974, 1)
+corner_radius_top_left = 1
+corner_radius_top_right = 1
+corner_radius_bottom_right = 1
+corner_radius_bottom_left = 1
+corner_detail = 1
 
 [node name="player" type="CharacterBody3D" unique_id=485831506 node_paths=PackedStringArray("CollisionShape3D", "GroundedShape3D", "Camera3D")]
 physics_interpolation_mode = 1
@@ -50,21 +78,28 @@ fov = 80.0
 near = 0.1
 far = 10000.0
 
+[node name="drill" parent="Camera3D" unique_id=2039124561 instance=ExtResource("2_vgqql")]
+transform = Transform3D(-0.017364822, 0.001519225, 0.19923894, 0.017431147, 0.19923894, 0, -0.19848078, 0.017364817, -0.017431153, 0.42400244, -0.35161507, -0.5215762)
+
 [node name="Label2" type="Label" parent="." unique_id=926241446]
-offset_left = 994.0
-offset_top = 5.0
-offset_right = 1217.0
-offset_bottom = 58.0
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -608.0
+offset_bottom = 27.0
+grow_horizontal = 0
 text = "F1- debug info    F2- fly/walk    F5- reset position    F6- debug render    F10- close game"
 label_settings = ExtResource("3_6t5aa")
+horizontal_alignment = 2
 
-[node name="Label3" type="Label" parent="." unique_id=791231466]
-offset_left = 994.0
-offset_top = 24.0
-offset_right = 1350.0
-offset_bottom = 77.0
+[node name="Label3" type="Label" parent="Label2" unique_id=791231466]
+layout_mode = 0
+offset_top = 19.0
+offset_right = 608.0
+offset_bottom = 46.0
 text = "LMB- mine    RMB- place    CTRL+RMB- bomb"
 label_settings = ExtResource("3_6t5aa")
+horizontal_alignment = 2
 
 [node name="Crosshair" type="Panel" parent="." unique_id=1373623817]
 anchors_preset = 8
@@ -79,7 +114,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_v0iea")
 
-[node name="TopPanel" type="Panel" parent="." unique_id=35533024 node_paths=PackedStringArray("PositionLabel", "HealthLabel")]
+[node name="TopPanel" type="Panel" parent="." unique_id=35533024 node_paths=PackedStringArray("PositionLabel", "BlockNameLabel", "BlockHealthLabel", "BlockHealthBar")]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
@@ -92,20 +127,55 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("2_cvnsp")
 PositionLabel = NodePath("Label")
-HealthLabel = NodePath("Label2")
+BlockNameLabel = NodePath("Label2")
+BlockHealthLabel = NodePath("Label3")
+BlockHealthBar = NodePath("healthbar/healthbar2")
 
 [node name="Label" type="Label" parent="TopPanel" unique_id=1072889969]
 layout_mode = 0
-offset_right = 223.0
-offset_bottom = 53.0
+offset_left = 5.0
+offset_right = 72.0
+offset_bottom = 57.0
 text = "position
 "
 label_settings = ExtResource("3_6t5aa")
 
 [node name="Label2" type="Label" parent="TopPanel" unique_id=965809190]
 layout_mode = 0
-offset_top = 17.0
-offset_right = 223.0
-offset_bottom = 70.0
+offset_top = 18.0
+offset_right = 366.0
+offset_bottom = 75.0
+text = "block name
+"
+label_settings = ExtResource("3_6t5aa")
+horizontal_alignment = 1
+
+[node name="Label3" type="Label" parent="TopPanel" unique_id=1986926188]
+layout_mode = 0
+offset_top = 34.0
+offset_right = 366.0
+offset_bottom = 61.0
 text = "block health"
 label_settings = ExtResource("3_6t5aa")
+horizontal_alignment = 1
+
+[node name="healthbar" type="Panel" parent="TopPanel" unique_id=2103228436]
+clip_contents = true
+layout_mode = 0
+offset_left = 20.0
+offset_top = 57.0
+offset_right = 346.0
+offset_bottom = 84.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_vgqql")
+
+[node name="healthbar2" type="Panel" parent="TopPanel/healthbar" unique_id=188458571]
+layout_mode = 0
+offset_right = 326.0
+offset_bottom = 27.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_fkybt")
+
+[node name="healthbar" type="Panel" parent="TopPanel/healthbar" unique_id=58097138]
+layout_mode = 0
+offset_right = 326.0
+offset_bottom = 27.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_x3wgy")

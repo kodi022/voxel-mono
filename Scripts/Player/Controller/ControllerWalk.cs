@@ -11,6 +11,9 @@ public class ControllerWalk : Controller
     private bool groundedLastTick = false;
     private float fallVelocity = 0f;
 
+    private bool holdingFire = false;
+    private double timeSinceHit = 0d;
+
     public override void ControllerProcess(double delta, in Player player)
     {
         base.ControllerProcess(delta, player);
@@ -19,6 +22,27 @@ public class ControllerWalk : Controller
     public override void ControllerPhysicsProcess(double delta, in Player player)
     {
         base.ControllerPhysicsProcess(@delta, player);
+
+        timeSinceHit += delta;
+
+        if (holdingFire && player.AimHitting)
+        {
+            // due to float, timeSinceHit becomes 0.0999... instead of 0.1
+            if (timeSinceHit > 0.099f)
+            {
+                timeSinceHit = 0;
+                var dmgInfo = new Voxel.Resource.DamageInfo()
+                {
+                    BlockPosition = player.AimBlockPosition,
+                    Damage = player.DrillLevel * 0.1d,
+                    FaceNormal = player.AimHitNormal,
+                    Player = player.Name,
+                    HitPosition = player.AimHitPosition,
+                    Tool = "drill"
+                };
+                Chunk.ChunkHitBlock(dmgInfo);
+            }
+        }
 
         var query = new PhysicsShapeQueryParameters3D
         {
@@ -77,14 +101,19 @@ public class ControllerWalk : Controller
     {
         base.ControllerInput(@event, player);
 
-        if (@event is InputEventMouseButton buttonEvent && buttonEvent.Pressed)
+        if (@event is InputEventMouseButton buttonEvent)
         {
+            if (buttonEvent.ButtonIndex == MouseButton.Left)
+            {
+                holdingFire = buttonEvent.Pressed;
+            }
+
             if (!player.AimHitting) return;
 
             switch (buttonEvent.ButtonIndex)
             {
                 case MouseButton.Left:
-                    Chunk.ChunkMineBlock(player.AimBlockPosition);
+
                     break;
                 case MouseButton.Right:
                     if (player.FrameTraceResult.ContainsKey("position"))

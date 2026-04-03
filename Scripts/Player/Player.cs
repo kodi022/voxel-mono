@@ -24,6 +24,7 @@ public partial class Player : CharacterBody3D, IPawn
 	public Chunk WithinChunk { get; private set; }
 	public bool AimHitting { get; private set; }
 	public Vector3 AimHitPosition { get; private set; }
+	public Vector3 AimHitNormal { get; private set; }
 	public BlockVec3 AimBlockPosition { get; private set; }
 	public BlockVec3 AimBlockFrontPosition { get; private set; }
 
@@ -34,6 +35,7 @@ public partial class Player : CharacterBody3D, IPawn
 	public Godot.Collections.Dictionary FrameTraceResult { get; private set; }
 
 	public float Health { get; set; }
+	public int DrillLevel { get; set; } = 1;
 
 	private Task rendDisTask = null;
 	private List<ChunkVec3> chunkToSpawn = [];
@@ -60,6 +62,7 @@ public partial class Player : CharacterBody3D, IPawn
 		{
 			AimHitting = true;
 			AimHitPosition = (Vector3)position;
+			AimHitNormal = (Vector3)FrameTraceResult["normal"];
 			AimBlockPosition = BlockVec3.FromVector3(AimHitPosition - (Vector3)FrameTraceResult["normal"] * 0.5f);
 			AimBlockFrontPosition = BlockVec3.FromVector3(AimHitPosition + (Vector3)FrameTraceResult["normal"] * 0.5f);
 			Selector.GlobalPosition = AimBlockPosition.ToVector3();
@@ -68,6 +71,7 @@ public partial class Player : CharacterBody3D, IPawn
 		{
 			AimHitting = false;
 			AimHitPosition = Vector3.Zero;
+			AimHitNormal = Vector3.Zero;
 			AimBlockPosition = BlockVec3.Zero;
 			AimBlockFrontPosition = BlockVec3.Zero;
 			Selector.GlobalPosition = Camera3D.GetForwardPosition(-100f);

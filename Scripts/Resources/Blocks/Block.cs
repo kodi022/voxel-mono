@@ -9,7 +9,8 @@ public class BlockInstance(in Block self)
 	public readonly Block BlockInfo = self;
 
 	// network these
-	public float Hp;
+	public double Hp;
+	public double GeneratedMaxHp;
 	public int DirYaw;
 	public int DirPitch;
 	public Block.BlockShapeEnum Shape;
@@ -150,7 +151,11 @@ public partial class Block : VoxelResource
 	public virtual void OnHit(DamageInfo info)
 	{
 		var block = ResourceManager.GetBlock(info.BlockInstance.BlockInfo.HashId);
-		if (info.Damage * 100 < block.HpRange.Y) return;
+		if (info.Damage * 2000 < block.HpRange.Y)
+		{
+			// fail sound
+			return;
+		}
 
 		if (info.BlockInstance.Hp < info.Damage)
 		{
@@ -158,12 +163,17 @@ public partial class Block : VoxelResource
 			OnBreak(info);
 			return;
 		}
-		// particle
+
+		info.BlockInstance.Hp -= info.Damage;
+
+		// sound?
+		// particle?
 		// block damage overlay?
 	}
 
 	public virtual void OnBreak(DamageInfo info)
 	{
+		info.Chunk.SetBlock(info.BlockPosition, "base:air");
 		// send different block back to chunk? (allow other than air)
 
 		// particle
@@ -307,11 +317,12 @@ public struct DamageInfo
 {
 	// using temporary types until proper types are implemented
 	public string Player;
-	public float Damage;
+	public double Damage;
 	public string Tool;
 	public BlockVec3 BlockPosition;
 	public Vector3 HitPosition;
 	public Vector3 FaceNormal;
+	public Chunk Chunk;
 	public BlockInstance BlockInstance;
 }
 
@@ -323,5 +334,6 @@ public struct TouchInfo
 	public Vector3 Velocity;
 	public Vector3 HitPosition;
 	public Vector3 FaceNormal;
+	public Chunk Chunk;
 	public BlockInstance BlockInstance;
 }
