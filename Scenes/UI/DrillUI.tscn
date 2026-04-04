@@ -1,0 +1,50 @@
+[gd_scene format=3 uid="uid://2jsqvi2d1hxm"]
+
+[ext_resource type="FontFile" uid="uid://bojq3dhm6mupu" path="res://Fonts/Minisystem.otf" id="1_mpa2w"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_f6uwa"]
+bg_color = Color(0, 0, 0, 0)
+
+[sub_resource type="LabelSettings" id="LabelSettings_f6uwa"]
+font_size = 36
+
+[sub_resource type="LabelSettings" id="LabelSettings_h28c2"]
+font = ExtResource("1_mpa2w")
+font_size = 100
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 0
+
+[node name="DrillUi" type="Control" unique_id=727339063]
+layout_mode = 3
+anchor_right = 1.0500001
+anchor_bottom = 0.94400007
+offset_right = -0.00012207031
+offset_bottom = 0.39996338
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="." unique_id=265034973]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_f6uwa")
+
+[node name="Label" type="Label" parent="Panel" unique_id=2011671858]
+layout_mode = 0
+offset_left = 113.0
+offset_right = 341.0
+offset_bottom = 42.0
+text = "HEALTH?"
+label_settings = SubResource("LabelSettings_f6uwa")
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="Panel/Label" unique_id=1175573128]
+layout_mode = 0
+offset_left = -65.0
+offset_top = 44.0
+offset_right = 293.0
+offset_bottom = 165.0
+text = "100"
+label_settings = SubResource("LabelSettings_h28c2")
+horizontal_alignment = 1

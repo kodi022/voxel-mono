@@ -4,6 +4,8 @@
 [ext_resource type="Script" uid="uid://c0crxpquoog05" path="res://Scripts/UI/HUD.cs" id="2_cvnsp"]
 [ext_resource type="PackedScene" uid="uid://dcng8pgxgxnf8" path="res://Models/drill.blend" id="2_vgqql"]
 [ext_resource type="LabelSettings" uid="uid://oti5e0ne4yea" path="res://Resources/LabelSettings/HUDInfo.tres" id="3_6t5aa"]
+[ext_resource type="PackedScene" uid="uid://2jsqvi2d1hxm" path="res://Scenes/UI/DrillUI.tscn" id="3_x3wgy"]
+[ext_resource type="FontFile" uid="uid://c7wj6shikuiex" path="res://Fonts/led.real-regular.ttf" id="5_fkybt"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_f60y1"]
 height = 1.6
@@ -20,6 +22,19 @@ fog_enabled = true
 fog_light_color = Color(0.06053035, 0.06053035, 0.060530342, 1)
 fog_depth_begin = 50.0
 fog_depth_end = 400.0
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_fkybt"]
+viewport_path = NodePath("Camera3D/drill/MeshInstance3D/SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_x3wgy"]
+resource_local_to_scene = true
+transparency = 2
+alpha_scissor_threshold = 0.64
+alpha_antialiasing_mode = 0
+albedo_texture = SubResource("ViewportTexture_fkybt")
+
+[sub_resource type="QuadMesh" id="QuadMesh_3smsa"]
+size = Vector2(1.68, 0.85)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_v0iea"]
 corner_radius_top_left = 5
@@ -54,6 +69,14 @@ corner_radius_bottom_right = 1
 corner_radius_bottom_left = 1
 corner_detail = 1
 
+[sub_resource type="LabelSettings" id="LabelSettings_x3wgy"]
+line_spacing = 0.0
+font = ExtResource("5_fkybt")
+font_size = 24
+outline_size = 2
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 0
+
 [node name="player" type="CharacterBody3D" unique_id=485831506 node_paths=PackedStringArray("CollisionShape3D", "GroundedShape3D", "Camera3D")]
 physics_interpolation_mode = 1
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, 0)
@@ -71,6 +94,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
 shape = SubResource("CylinderShape3D_cvnsp")
 disabled = true
 
+[node name="OmniLight3D" type="OmniLight3D" parent="." unique_id=2095181831]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.318473, 0)
+light_specular = 0.0
+omni_range = 7.0
+
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1311303652]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2943115, 0)
 environment = SubResource("Environment_cvnsp")
@@ -78,26 +106,38 @@ fov = 80.0
 near = 0.1
 far = 10000.0
 
-[node name="drill" parent="Camera3D" unique_id=2039124561 instance=ExtResource("2_vgqql")]
-transform = Transform3D(-0.017364822, 0.001519225, 0.19923894, 0.017431147, 0.19923894, 0, -0.19848078, 0.017364817, -0.017431153, 0.42400244, -0.35161507, -0.5215762)
+[node name="drill" parent="Camera3D" unique_id=115114202 instance=ExtResource("2_vgqql")]
+transform = Transform3D(-0.017364822, 0.001519225, 0.19923894, 0.017431147, 0.19923894, 0, -0.19848078, 0.017364817, -0.017431153, 0.4249232, -0.3526078, -0.60775036)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Camera3D/drill" unique_id=1716180442]
+transform = Transform3D(-0.99999636, 2.9802322e-08, 5.2154064e-08, 8.568168e-08, 0.93968695, 0.3420183, -2.7567148e-07, 0.3420185, -0.93968725, -0.25145936, 0.45527077, -0.871711)
+material_override = SubResource("StandardMaterial3D_x3wgy")
+mesh = SubResource("QuadMesh_3smsa")
+
+[node name="SubViewport" type="SubViewport" parent="Camera3D/drill/MeshInstance3D" unique_id=318567850]
+transparent_bg = true
+size = Vector2i(1680, 850)
+
+[node name="DrillUi" parent="Camera3D/drill/MeshInstance3D/SubViewport" unique_id=727339063 instance=ExtResource("3_x3wgy")]
 
 [node name="Label2" type="Label" parent="." unique_id=926241446]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -608.0
-offset_bottom = 27.0
+offset_left = -759.0
+offset_top = -4.0
+offset_bottom = 23.0
 grow_horizontal = 0
-text = "F1- debug info    F2- fly/walk    F5- reset position    F6- debug render    F10- close game"
+text = "ESC-unlock mouse    F1-debug info    F2-fly/walk    F5-reset position    F6-wireframe/nolod/normal    F10-close game"
 label_settings = ExtResource("3_6t5aa")
 horizontal_alignment = 2
 
 [node name="Label3" type="Label" parent="Label2" unique_id=791231466]
 layout_mode = 0
 offset_top = 19.0
-offset_right = 608.0
+offset_right = 759.0
 offset_bottom = 46.0
-text = "LMB- mine    RMB- place    CTRL+RMB- bomb"
+text = "walking -> (LMB-drill)        flying -> (LMB-break    RMB-place    CTRL+RMB-bomb)"
 label_settings = ExtResource("3_6t5aa")
 horizontal_alignment = 2
 
@@ -133,29 +173,21 @@ BlockHealthBar = NodePath("healthbar/healthbar2")
 
 [node name="Label" type="Label" parent="TopPanel" unique_id=1072889969]
 layout_mode = 0
-offset_left = 5.0
-offset_right = 72.0
-offset_bottom = 57.0
+offset_left = 6.0
+offset_top = -2.0
+offset_right = 73.0
+offset_bottom = 61.0
 text = "position
 "
 label_settings = ExtResource("3_6t5aa")
 
 [node name="Label2" type="Label" parent="TopPanel" unique_id=965809190]
 layout_mode = 0
-offset_top = 18.0
+offset_top = 33.0
 offset_right = 366.0
-offset_bottom = 75.0
+offset_bottom = 96.0
 text = "block name
 "
-label_settings = ExtResource("3_6t5aa")
-horizontal_alignment = 1
-
-[node name="Label3" type="Label" parent="TopPanel" unique_id=1986926188]
-layout_mode = 0
-offset_top = 34.0
-offset_right = 366.0
-offset_bottom = 61.0
-text = "block health"
 label_settings = ExtResource("3_6t5aa")
 horizontal_alignment = 1
 
@@ -179,3 +211,14 @@ layout_mode = 0
 offset_right = 326.0
 offset_bottom = 27.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_x3wgy")
+
+[node name="Label3" type="Label" parent="TopPanel" unique_id=1986926188]
+layout_mode = 0
+offset_top = 62.0
+offset_right = 366.0
+offset_bottom = 87.0
+text = "block health"
+label_settings = SubResource("LabelSettings_x3wgy")
+horizontal_alignment = 1
+autowrap_trim_flags = 0
+justification_flags = 0

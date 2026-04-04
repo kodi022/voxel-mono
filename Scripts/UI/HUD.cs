@@ -27,17 +27,16 @@ public partial class HUD : Panel
 	public override void _Process(double delta)
 	{
 		PositionLabel.Text = $"{BlockVec3.FromVector3(Player.Self.GlobalPosition)}";
-		var block = Chunk.ChunkSelectBlock(Player.Self.AimBlockPosition);
-		if (block is not null)
+		if (Player.Self.AimHitBlock is not null)
 		{
-			if (lastBlock != Player.Self.AimBlockPosition.ToVector3()) hpLerp = block.Hp;
+			if (lastBlock != Player.Self.AimHitBlockPosition.ToVector3()) hpLerp = Player.Self.AimHitBlock.Hp;
 
-			lastBlock = Player.Self.AimBlockPosition.ToVector3();
+			lastBlock = Player.Self.AimHitBlockPosition.ToVector3();
 
-			hpLerp = Mathf.Lerp(hpLerp, block.Hp, delta * 10f);
-			BlockNameLabel.Text = block.BlockInfo.Name;
+			hpLerp = Mathf.Lerp(hpLerp, Player.Self.AimHitBlock.Hp, delta * 10f);
+			BlockNameLabel.Text = Player.Self.AimHitBlock.BlockInfo.Name;
 			BlockHealthLabel.Text = ParseHealth(hpLerp);
-			BlockHealthBar.Position = new Vector2(((float)(hpLerp / block.GeneratedMaxHp) - 1f) * BlockHealthBar.Size.X, 0);
+			BlockHealthBar.Position = new Vector2(((float)(hpLerp / Player.Self.AimHitBlock.GeneratedMaxHp) - 1f) * BlockHealthBar.Size.X, 0);
 			if (!this.Visible) this.Show();
 		}
 		else

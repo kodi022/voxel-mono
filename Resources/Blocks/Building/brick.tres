@@ -7,6 +7,6 @@
 script = ExtResource("2_8otjd")
 Name = "Brick"
 BombResistance = 2.0
-HpRange = Vector2(30, 30)
+HpRange = Vector2(50, 50)
 AlbedoTexture = ExtResource("1_3jisn")
 ResourceId = "brick"

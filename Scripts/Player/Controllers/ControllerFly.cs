@@ -5,6 +5,8 @@ using Voxel.World;
 
 public class ControllerFly : Controller
 {
+    public override float BlockReachDistance { get; private protected set; } = 24f;
+
     public override void ControllerProcess(double delta, in Player player)
     {
 
@@ -40,7 +42,7 @@ public class ControllerFly : Controller
             switch (buttonEvent.ButtonIndex)
             {
                 case MouseButton.Left:
-                    Chunk.ChunkBreakBlock(player.AimBlockPosition);
+                    Chunk.ChunkBreakBlock(player.AimHitBlockPosition);
                     break;
                 case MouseButton.Right:
                     if (buttonEvent.CtrlPressed)
@@ -55,7 +57,7 @@ public class ControllerFly : Controller
                     }
                     else
                     {
-                        Chunk.ChunkPlaceBlock(player.AimBlockFrontPosition, "base:brick");
+                        Chunk.ChunkPlaceBlock(player.AimHitBlockFrontPosition, "base:brick");
                     }
                     break;
             }

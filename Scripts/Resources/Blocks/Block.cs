@@ -151,7 +151,7 @@ public partial class Block : VoxelResource
 	public virtual void OnHit(DamageInfo info)
 	{
 		var block = ResourceManager.GetBlock(info.BlockInstance.BlockInfo.HashId);
-		if (info.Damage * 2000 < block.HpRange.Y)
+		if (info.Damage * 1800 < block.HpRange.Y) // hits 10 times a second at 1/10 damage, 1800 is 3 minutes
 		{
 			// fail sound
 			return;

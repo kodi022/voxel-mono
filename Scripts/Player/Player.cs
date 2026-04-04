@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Godot;
+using Voxel.Resource;
 using Voxel.World;
 
 namespace Voxel;
@@ -25,8 +26,9 @@ public partial class Player : CharacterBody3D, IPawn
 	public bool AimHitting { get; private set; }
 	public Vector3 AimHitPosition { get; private set; }
 	public Vector3 AimHitNormal { get; private set; }
-	public BlockVec3 AimBlockPosition { get; private set; }
-	public BlockVec3 AimBlockFrontPosition { get; private set; }
+	public BlockVec3 AimHitBlockPosition { get; private set; }
+	public BlockVec3 AimHitBlockFrontPosition { get; private set; }
+	public BlockInstance AimHitBlock { get; private set; }
 
 	public Controller CurrentController { get; private set; } = new ControllerWalk();
 	public Input.MouseModeEnum MouseState { get; private set; } = Input.MouseModeEnum.Captured;
@@ -55,25 +57,28 @@ public partial class Player : CharacterBody3D, IPawn
 	{
 		Input.MouseMode = MouseState;
 
-		var endPos = Camera3D.GetForwardPosition(20f);
-		var query = PhysicsRayQueryParameters3D.Create(Camera3D.GlobalPosition, endPos);
+		var endPos = Camera3D.GetForwardPosition(CurrentController.BlockReachDistance);
+		var query = PhysicsRayQueryParameters3D.Create(Camera3D.GlobalPosition, endPos, exclude: [GetRid()]);
 		FrameTraceResult = GetWorld3D().DirectSpaceState.IntersectRay(query);
-		if (FrameTraceResult.TryGetValue("position", out Variant position))
+		if (FrameTraceResult.TryGetValue("position", out Variant pos))
 		{
 			AimHitting = true;
-			AimHitPosition = (Vector3)position;
+			AimHitPosition = (Vector3)pos;
 			AimHitNormal = (Vector3)FrameTraceResult["normal"];
-			AimBlockPosition = BlockVec3.FromVector3(AimHitPosition - (Vector3)FrameTraceResult["normal"] * 0.5f);
-			AimBlockFrontPosition = BlockVec3.FromVector3(AimHitPosition + (Vector3)FrameTraceResult["normal"] * 0.5f);
-			Selector.GlobalPosition = AimBlockPosition.ToVector3();
+			AimHitBlockPosition = BlockVec3.FromVector3(AimHitPosition - (Vector3)FrameTraceResult["normal"] * 0.5f);
+			AimHitBlockFrontPosition = BlockVec3.FromVector3(AimHitPosition + (Vector3)FrameTraceResult["normal"] * 0.5f);
+			AimHitBlock = Chunk.ChunkSelectBlock(AimHitBlockPosition);
+			if (AimHitBlock is not null) Selector.GlobalPosition = AimHitBlockPosition.ToVector3();
+			else Selector.GlobalPosition = Camera3D.GetForwardPosition(-100f);
 		}
 		else
 		{
 			AimHitting = false;
 			AimHitPosition = Vector3.Zero;
 			AimHitNormal = Vector3.Zero;
-			AimBlockPosition = BlockVec3.Zero;
-			AimBlockFrontPosition = BlockVec3.Zero;
+			AimHitBlockPosition = BlockVec3.Zero;
+			AimHitBlockFrontPosition = BlockVec3.Zero;
+			AimHitBlock = null;
 			Selector.GlobalPosition = Camera3D.GetForwardPosition(-100f);
 		}
 

@@ -4,6 +4,8 @@ using Voxel;
 
 public class Controller
 {
+    public virtual float BlockReachDistance { get; private protected set; } = 5f;
+
     public virtual void ControllerProcess(double delta, in Player player)
     {
 
