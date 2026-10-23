@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="BlockLiquid" format=3 uid="uid://cq6msq4l7gjrn"]
+
+[ext_resource type="Texture2D" uid="uid://cctxj58bof2lo" path="res://Images/blocks/stone/_height.png" id="1_jregv"]
+[ext_resource type="Script" uid="uid://cp8l1026p4btd" path="res://Scripts/Resources/Blocks/BlockLiquid.cs" id="1_q6rrg"]
+[ext_resource type="Texture2D" uid="uid://xxi6bv8en7fo" path="res://Images/blocks/stone/_normal.png" id="2_ke7hr"]
+
+[resource]
+script = ExtResource("1_q6rrg")
+Name = "Water"
+UsesTick = true
+BlockCull = 1
+BlockMaterial = 1
+ColorTint = Color(0.105882354, 0.18039216, 0.4509804, 0.78039217)
+AlbedoTexture = ExtResource("1_jregv")
+NormalTexture = ExtResource("2_ke7hr")
+ResourceId = "water"

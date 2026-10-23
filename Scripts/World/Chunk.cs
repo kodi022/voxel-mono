@@ -1,5 +1,5 @@
-using Godot;
 using System.Collections.Generic;
+using Godot;
 using Voxel.Resource;
 
 namespace Voxel.World;
@@ -16,14 +16,15 @@ public partial class Chunk
     public readonly int ChunkPositionHash;
 
     public bool Simulating { get; private set; } = false;
+    public bool UsingTick { get; private set; } = false;
     public bool BlocksGenerated { get; private set; } = false;
     public bool MeshGenerating { get; private set; } = false;
-
-    public bool GeneratedMesh => meshInstance.IsValid;
-    public bool GeneratedPhysicsMesh => physicsMeshInstance.IsValid;
+    public int Lod { get; set; } = 0;
 
     // position hash
     public Dictionary<int, Node> ChunkEntities { get; private set; } = [];
+
+    public HashSet<BlockVec3> TickedBlocks { get; private set; } = [];
 
     // true if chunk at Directions[index] exists
     public bool[] AdjacentChunks { get; set; } = [false, false, false, false, false, false];
@@ -40,23 +41,27 @@ public partial class Chunk
 
     // * enabling / disabling
 
-    public Chunk(Region region, ChunkVec3 worldPosition)
+    public Chunk(Region region, ChunkVec3 worldPosition, int lod)
     {
         this.region = region;
-        world3D = region.GetWorld3D();
-        Blocks ??= new BlockInstance[ChunkSize, ChunkSize, ChunkSize];
+        world3D = ChunkManager.Current.GetWorld3D();
+        Blocks = new BlockInstance[ChunkSize, ChunkSize, ChunkSize];
 
         ChunkPosition = worldPosition;
         ChunkPositionHash = ChunkPosition.GetVecHash();
+        Lod = lod;
     }
 
     public void CleanupChunk()
     {
-        if (GeneratedMesh)
-            RenderingServer.FreeRid(meshInstance);
+        if (meshInstanceData.MeshRid.IsValid)
+            RenderingServer.FreeRid(meshInstanceData.MeshRid);
 
-        if (GeneratedPhysicsMesh)
-            PhysicsServer3D.FreeRid(physicsMeshInstance);
+        if (meshInstanceData.PhysicsMeshRid.IsValid)
+            PhysicsServer3D.FreeRid(meshInstanceData.PhysicsMeshRid);
+
+        if (meshInstanceData.PhysicsMeshShape.IsValid)
+            PhysicsServer3D.FreeRid(meshInstanceData.PhysicsMeshShape);
 
         noise.Dispose();
         noise = null;
@@ -76,29 +81,56 @@ public partial class Chunk
         Simulating = false;
     }
 
+
     // * modifying blocks
+
+    public void TickBlocks()
+    {
+        if (!UsingTick) return;
+
+        foreach (var pos in TickedBlocks)
+        {
+            var instance = Blocks[pos.X, pos.Y, pos.Z];
+            instance.BlockInfo.OnTick(new GenericInfo() { BlockLocalPosition = pos, Chunk = this, BlockInstance = instance });
+        }
+
+        //ChunkManager.UpdateChunk(ChunkPosition);
+    }
+
+    /// <summary> Finds Chunk. null if not found </summary>
+    public static Chunk ChunkFind(ChunkVec3 pos)
+    {
+        var regionPos = (RegionVec3)pos;
+
+        if (ChunkManager.Regions.TryGetValue(regionPos.GetVecHash(), out Region region))
+        {
+            return region.ChunkGet(pos);
+        }
+
+        return null;
+    }
 
     public static void ChunkHitBlock(in DamageInfo info)
     {
-        var chunk = ChunkManager.FindChunk((ChunkVec3)info.BlockPosition);
+        var chunk = ChunkFind((ChunkVec3)info.BlockPosition);
         chunk?.HitBlock(info);
     }
 
     public static void ChunkBreakBlock(in BlockVec3 pos)
     {
-        var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
+        var chunk = ChunkFind((ChunkVec3)pos);
         chunk?.SetBlock(pos, "base:air");
     }
 
     public static void ChunkPlaceBlock(in BlockVec3 pos, in string blockId)
     {
-        var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
+        var chunk = ChunkFind((ChunkVec3)pos);
         chunk?.SetBlock(pos, blockId);
     }
 
-    public static BlockInstance ChunkSelectBlock(in BlockVec3 pos)
+    public static BlockInstance ChunkGetBlock(in BlockVec3 pos)
     {
-        var chunk = ChunkManager.FindChunk((ChunkVec3)pos);
+        var chunk = ChunkFind((ChunkVec3)pos);
         return chunk?.GetBlock(pos);
     }
 
@@ -126,10 +158,25 @@ public partial class Chunk
 
         if (block != blockId)
         {
+            var worldPos = pos + (BlockVec3)ChunkPosition;
+
+            // Remove old block from ticking if it was ticking
+            if (block != 0 && block.BlockInfo.UsesTick)
+            {
+                TickedBlocks.Remove(pos);
+            }
+
             Blocks[pos.X, pos.Y, pos.Z] = (BlockInstance)blockId;
             var hp = Blocks[pos.X, pos.Y, pos.Z].BlockInfo.HpRange.Y;
             Blocks[pos.X, pos.Y, pos.Z].Hp = hp;
             Blocks[pos.X, pos.Y, pos.Z].GeneratedMaxHp = hp;
+
+            // Add new block to ticking if it uses tick
+            if (Blocks[pos.X, pos.Y, pos.Z].BlockInfo.UsesTick)
+            {
+                TickedBlocks.Add(pos);
+                UsingTick = true;
+            }
 
             if (pos.X == ChunkSize - 1) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[0]);
             if (pos.X == 0) ChunkManager.UpdateChunk(ChunkPosition + neighborOffset[1]);
@@ -194,7 +241,6 @@ public partial class Chunk
 
         var block = Blocks[pos.X, pos.Y, pos.Z];
         if (block is null) return null;
-        if (block == 0 || block.BlockInfo.Unbreakable) return null;
 
         return Blocks[pos.X, pos.Y, pos.Z];
     }

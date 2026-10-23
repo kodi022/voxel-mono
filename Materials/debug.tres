@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://wtvvvk84j67s"]
+
+[resource]
+transparency = 1
+no_depth_test = true
+shading_mode = 0
+disable_ambient_light = true
+disable_fog = true
+disable_specular_occlusion = true
+albedo_color = Color(1, 0, 1, 1)
+texture_filter = 0
+stencil_outline_thickness = 0.457

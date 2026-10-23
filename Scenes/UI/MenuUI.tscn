@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://d0p8i880f4n74"]
+
+[ext_resource type="Script" uid="uid://x7acos2ouwdp" path="res://Scripts/UI/MenuUI.cs" id="1_qq5iy"]
+
+[node name="MenuUi" type="Control" unique_id=98837154]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_qq5iy")
+
+[node name="Panel" type="Panel" parent="." unique_id=2049391350]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -300.0
+offset_right = 199.99976
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Button" type="Button" parent="Panel" unique_id=1083186155]
+layout_mode = 0
+offset_left = 52.0
+offset_top = 22.0
+offset_right = 291.0
+offset_bottom = 71.0
+text = "Return"
+
+[node name="Button2" type="Button" parent="Panel" unique_id=110569616]
+layout_mode = 0
+offset_left = 54.0
+offset_top = 80.0
+offset_right = 293.0
+offset_bottom = 129.0
+text = "Exit"

@@ -1,6 +1,3 @@
-using Godot;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Voxel.Resource;
 
 namespace Voxel.World;
@@ -47,57 +44,61 @@ public partial class Chunk
     // pitch 0 = up, 1 = side, 2 = down
     // yaw 0 = normal, 1 = right, 2 = back, 3 = left
 
-    private static readonly Dictionary<int, Material> blockMaterials = [];
+    private static Dictionary<int, OrmMaterial3D> blockMaterials = [];
 
-    private Rid meshInstance;
-    private ArrayMesh meshInstanceData;
-    private Rid physicsMeshInstance;
-    private Rid physicsMeshInstanceShape;
-
-    private List<int> surfaceBlockIds;
-    private int surfaceCount = 0;
-    private List<Vector3> physicsMeshFaces;
+    MeshInstanceData meshInstanceData;
+    private List<int> surfaceBlockIds = [];
 
     public Task GenerateMeshData()
     {
-        MeshGenerating = true;
+        if (MeshGenerating) return Task.CompletedTask;
 
-        meshInstanceData = new();
-        surfaceBlockIds = [];
-        physicsMeshFaces = [];
+        MeshGenerating = true;
+        surfaceBlockIds.Clear();
+
+        GenerateMeshDataMesh();
+
+        return Task.CompletedTask;
+    }
+
+    private Task GenerateMeshDataMesh()
+    {
+        meshInstanceData ??= new();
+        meshInstanceData.MeshData = new();
+        meshInstanceData.PhysicsMeshFaces = [];
 
         // build surfaces
-        // < blockId, < lodId, positions > >
-        Dictionary<int, Dictionary<int, List<Vector4I>>> surfaces = [];
-        for (int LOD = 0; LOD < 1; LOD++)
+        // < blockId, list< pos, dir > >
+        Dictionary<Block, List<Vector4I>> surfaces = [];
+
+        if (Lod < 1)
         {
-            var blockSize = (sbyte)Mathf.Pow(2, LOD);
-            for (sbyte x = 0; x < ChunkSize; x += blockSize) for (sbyte z = 0; z < ChunkSize; z += blockSize) for (sbyte y = 0; y < ChunkSize; y += blockSize)
+            for (sbyte x = 0; x < ChunkSize; x++) for (sbyte z = 0; z < ChunkSize; z++) for (sbyte y = 0; y < ChunkSize; y++)
             {
                 var blockInfo = Blocks[x, y, z].BlockInfo;
-                if (blockInfo.BlockCull == Resource.Block.BlockCullEnum.Translucent) continue;
+                if (blockInfo.BlockCull == Block.BlockCullEnum.Translucent) continue;
 
                 for (sbyte w = 0; w < 6; w++)
                 {
-                    Vector3B checkPos = new Vector3B(x, y, z) + Directions[w] * blockSize;
+                    Vector3B checkPos = new Vector3B(x, y, z) + Directions[w];
 
                     if (checkPos.IsInside(ChunkSize))
                     { // inner edges
                         var adjBlockInfo = Blocks[checkPos.X, checkPos.Y, checkPos.Z].BlockInfo;
-                        if (adjBlockInfo.BlockCull == Resource.Block.BlockCullEnum.Opaque) continue;
-                        if (blockInfo.BlockCull == Resource.Block.BlockCullEnum.Transparent && adjBlockInfo.BlockCull == Resource.Block.BlockCullEnum.Transparent) continue;
+                        if (adjBlockInfo.BlockCull == Block.BlockCullEnum.Opaque) continue;
+                        if (blockInfo.BlockCull == Block.BlockCullEnum.Transparent && adjBlockInfo.BlockCull == Block.BlockCullEnum.Transparent) continue;
 
-                        surfaces.TryAdd(blockInfo.HashId, []);
-                        if (!surfaces[blockInfo.HashId].TryAdd(LOD, [new(x, y, z, w)]))
+                        var pos = new Vector4I(x, y, z, w);
+                        if (!surfaces.TryAdd(blockInfo, [pos]))
                         {
-                            surfaces[blockInfo.HashId][LOD].Add(new(x, y, z, w));
+                            surfaces[blockInfo].Add(pos);
                         }
                     }
                     else
                     { // outer edges
                         if (!AdjacentChunks[w]) continue;
 
-                        var chunk2 = ChunkManager.FindChunk(ChunkPosition + Directions[w]);
+                        var chunk2 = ChunkFind(ChunkPosition + Directions[w]);
                         if (chunk2 is null) continue;
                         if (!chunk2.BlocksGenerated) continue;
 
@@ -105,85 +106,93 @@ public partial class Chunk
                         var checkPos2 = (checkPos + ChunkSize * 2) % ChunkSize;
                         var adjBlockInfo = chunk2.Blocks[checkPos2.X, checkPos2.Y, checkPos2.Z].BlockInfo;
                         if (adjBlockInfo is null) continue;
-                        if (adjBlockInfo.BlockCull == Resource.Block.BlockCullEnum.Opaque) continue;
-                        if (blockInfo.BlockCull == Resource.Block.BlockCullEnum.Transparent && adjBlockInfo.BlockCull == Resource.Block.BlockCullEnum.Transparent) continue;
+                        if (adjBlockInfo.BlockCull == Block.BlockCullEnum.Opaque) continue;
+                        if (blockInfo.BlockCull == Block.BlockCullEnum.Transparent && adjBlockInfo.BlockCull == Block.BlockCullEnum.Transparent) continue;
 
-                        surfaces.TryAdd(blockInfo.HashId, []);
-                        if (!surfaces[blockInfo.HashId].TryAdd(LOD, [new(x, y, z, w)]))
+                        var pos = new Vector4I(x, y, z, w);
+                        if (!surfaces.TryAdd(blockInfo, [pos]))
                         {
-                            surfaces[blockInfo.HashId][LOD].Add(new(x, y, z, w));
+                            surfaces[blockInfo].Add(pos);
                         }
                     }
                 }
             }
         }
+        else
+        {
+            var blockSize = (sbyte)Mathf.Pow(2, Lod);
+            var lodChunkSize = (sbyte)(MathF.Max(1, blockSize) * ChunkSize);
+            for (sbyte x = 0; x < lodChunkSize; x += blockSize) for (sbyte z = 0; z < lodChunkSize; z += blockSize) for (sbyte y = 0; y < lodChunkSize; y += blockSize)
+            {
+                var blockInfo = GenerateBlock((BlockVec3)ChunkPosition + new BlockVec3(x, y, z));
+                if (blockInfo.BlockInfo.BlockCull == Block.BlockCullEnum.Translucent) continue;
 
-        surfaceCount = surfaces.Count;
-        if (surfaceCount == 0)
+                for (sbyte w = 0; w < 6; w++)
+                {
+                    BlockVec3 checkPos = new BlockVec3(x, y, z) + Directions[w] * blockSize;
+
+                    var adjBlockInfo = GenerateBlock((BlockVec3)ChunkPosition + new BlockVec3(checkPos.X, checkPos.Y, checkPos.Z));
+                    if (adjBlockInfo.BlockInfo.BlockCull == Block.BlockCullEnum.Opaque) continue;
+                    if (blockInfo.BlockInfo.BlockCull == Block.BlockCullEnum.Transparent && adjBlockInfo.BlockInfo.BlockCull == Block.BlockCullEnum.Transparent) continue;
+
+                    var pos = new Vector4I(x, y, z, w);
+                    if (!surfaces.TryAdd(blockInfo.BlockInfo, [pos]))
+                    {
+                        surfaces[blockInfo.BlockInfo].Add(pos);
+                    }
+                }
+            }
+        }
+
+        if (surfaces.Count == 0)
         {
             MeshGenerating = false;
             return Task.CompletedTask;
         }
 
         // build geometry
-        var fullRenderDistance = Player.RenderDistance * ChunkSize * Player.RenderDistance * ChunkSize;
-        foreach (var blockSurfaceKVP in surfaces)
+        foreach (var blockPosKVP in surfaces)
         {
             int faces = 0;
             var meshVerts = new List<Vector3>();
             var normals = new List<Vector3>();
             var uvs = new List<Vector2>();
             var indices = new List<int>();
-            Godot.Collections.Dictionary lods = []; // (float, int[])   float is distance to use, int[] is indexes of the geometry
-
-            // GD.Print($"--{WorldPosition}: {blockSurfaceKVP.Key}");
-
-            foreach (var lodPosKVP in blockSurfaceKVP.Value)
+            foreach (var pos in blockPosKVP.Value)
             {
-                List<int> lodIndices = [];
-                foreach (var pos in lodPosKVP.Value)
+                BlockInstance blockInstance = null;
+                if (Lod < 1) blockInstance = Blocks[pos.X, pos.Y, pos.Z];
+                else blockInstance = ResourceManager.GetBlockInstance(blockPosKVP.Key.FullId);
+                var blockInfo = blockInstance.BlockInfo;
+
+                var genData = new MeshGenerationData()
                 {
-                    var blockInstance = Blocks[pos.X, pos.Y, pos.Z];
-                    var blockInfo = blockInstance.BlockInfo;
+                    BlockInstance = blockInstance,
+                    PosDir = pos,
+                    Lod = Lod,
+                    MeshVerts = [],
+                    Normals = [],
+                    Uvs = [],
+                    Indices = [],
+                    FaceCount = faces,
+                };
 
-                    var genData = new MeshGenerationData()
-                    {
-                        BlockInstance = blockInstance,
-                        Lod = lodPosKVP.Key,
-                        PosDir = pos,
-                        MeshVerts = [],
-                        Normals = [],
-                        Uvs = [],
-                        Indices = [],
-                        FaceCount = faces,
-                        CurrentLodIndices = [],
-                    };
+                blockInfo.GenerateProceduralMesh(ref genData);
 
-                    blockInfo.GenerateProceduralMesh(ref genData);
-                    meshVerts.AddRange(genData.MeshVerts);
-                    normals.AddRange(genData.Normals);
-                    uvs.AddRange(genData.Uvs);
-                    indices.AddRange(genData.Indices);
-                    faces = genData.FaceCount;
-                    lodIndices.AddRange(genData.CurrentLodIndices);
+                meshVerts.AddRange(genData.MeshVerts);
+                normals.AddRange(genData.Normals);
+                uvs.AddRange(genData.Uvs);
+                indices.AddRange(genData.Indices);
+                faces = genData.FaceCount;
 
-                    var physGenData = new MeshPhysicsGenerationData()
-                    {
-                        BlockInstance = blockInstance,
-                        Lod = lodPosKVP.Key,
-                        PosDir = pos,
-                        PhysMeshVerts = physicsMeshFaces,
-                    };
+                var physGenData = new MeshPhysicsGenerationData()
+                {
+                    BlockInstance = blockInstance,
+                    PosDir = pos,
+                    PhysMeshVerts = meshInstanceData.PhysicsMeshFaces,
+                };
 
-                    blockInfo.GenerateProceduralPhysicsMesh(ref physGenData);
-                }
-
-                var blockSize = (sbyte)Mathf.Pow(2, lodPosKVP.Key);
-                indices.AddRange(lodIndices);
-                var distance = fullRenderDistance / blockSize;
-                lods.Add((float)distance, lodIndices.ToArray());
-
-                // GD.Print($"-{lodPosKVP.Key}: {lodIndices.Count} ({lodIndices.First()})");
+                blockInfo.GenerateProceduralPhysicsMesh(ref physGenData);
             }
 
             if (faces == 0) continue;
@@ -195,111 +204,131 @@ public partial class Chunk
             arrays[(int)Mesh.ArrayType.TexUV] = uvs.ToArray();
             arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
 
-            // errors if no lods for given surface
-            if (lods.Count < 2) meshInstanceData.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            else meshInstanceData.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, lods: lods);
-
-            surfaceBlockIds.Add(blockSurfaceKVP.Key);
+            meshInstanceData.MeshData.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            surfaceBlockIds.Add(blockPosKVP.Key.HashId);
         }
 
         MeshGenerating = false;
         return Task.CompletedTask;
     }
 
+    public class MeshInstanceData
+    {
+        public Rid MeshRid;
+        public ArrayMesh MeshData;
+        public Rid PhysicsMeshRid;
+        public Rid PhysicsMeshShape;
+        public List<Vector3> PhysicsMeshFaces;
+        public Godot.Collections.Dictionary<string, Variant> PhysicsMeshData;
+    }
+
     public struct MeshGenerationData
     {
         public BlockInstance BlockInstance;
-        public int Lod;
         public Vector4I PosDir;
+        public int Lod;
         public List<Vector3> MeshVerts;
         public List<Vector3> Normals;
         public List<Vector2> Uvs;
         public List<int> Indices;
         public int FaceCount;
-        public List<int> CurrentLodIndices;
     }
 
     public struct MeshPhysicsGenerationData
     {
         public BlockInstance BlockInstance;
-        public int Lod;
         public Vector4I PosDir;
         public List<Vector3> PhysMeshVerts;
     }
 
-    public void CreateMesh()
+    public void CreateMesh(string meshName = "")
     {
-        if (meshInstance.IsValid)
-            RenderingServer.FreeRid(meshInstance);
-
         if (MeshGenerating) return;
+
+        if (meshInstanceData.MeshRid.IsValid)
+        {
+            RenderingServer.FreeRid(meshInstanceData.MeshRid);
+            meshInstanceData.MeshRid = default;
+        }
+
+        if (surfaceBlockIds is null || surfaceBlockIds.Count == 0) return;
+
         var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
-        meshInstance = RenderingServer.InstanceCreate();
-        RenderingServer.InstanceSetBase(meshInstance, meshInstanceData.GetRid());
-        RenderingServer.InstanceSetScenario(meshInstance, world3D.Scenario);
-        RenderingServer.InstanceSetTransform(meshInstance, transform);
-        RenderingServer.InstanceGeometrySetLodBias(meshInstance, -1f);
+        meshInstanceData.MeshRid = RenderingServer.InstanceCreate();
+        RenderingServer.InstanceSetBase(meshInstanceData.MeshRid, meshInstanceData.MeshData.GetRid());
+        RenderingServer.InstanceSetScenario(meshInstanceData.MeshRid, world3D.Scenario);
+        RenderingServer.InstanceSetTransform(meshInstanceData.MeshRid, transform);
 
-        if (MeshGenerating) return;
         int surfaceIndex = 0;
         foreach (var id in surfaceBlockIds)
         {
-            if (!blockMaterials.TryGetValue(id, out Material mat))
+            if (!blockMaterials.TryGetValue(id, out OrmMaterial3D mat))
             {
-                var block = ResourceManager.BlockRegistry[id];
+                var block = ResourceManager.GetBlock(id);
+                GD.Print($"NEW MATERIAL {block.Name} {block.HashId}");
+
                 switch (block.BlockMaterial)
                 {
-                    case Resource.Block.BlockMaterialEnum.Default:
-                        mat = (OrmMaterial3D)BlockMaterial.Duplicate();
-                        ((OrmMaterial3D)mat).Transparency = BaseMaterial3D.TransparencyEnum.Disabled;
-                        ((OrmMaterial3D)mat).AlbedoColor = block.ColorTint;
-                        ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture, MissingTexture);
-                        ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture, MissingTexture);
-                        ((OrmMaterial3D)mat).OrmTexture = SetTextureFromBlock(block.OrmTexture, DefaultOrm);
+                    case Block.BlockMaterialEnum.Default:
+                    case Block.BlockMaterialEnum.Transparent:
+                        mat = (OrmMaterial3D)BlockMaterial.Duplicate(true);
+                        mat.Transparency = block.BlockMaterial == Block.BlockMaterialEnum.Transparent ?
+                            BaseMaterial3D.TransparencyEnum.Alpha :
+                            BaseMaterial3D.TransparencyEnum.Disabled;
+                        mat.AlbedoColor = block.ColorTint;
+                        mat.AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture, MissingTexture);
+                        mat.NormalTexture = SetTextureFromBlock(block.NormalTexture, MissingTexture);
+                        mat.OrmTexture = SetTextureFromBlock(block.OrmTexture, DefaultOrm);
                         break;
-                    case Resource.Block.BlockMaterialEnum.Transparent:
-                        mat = (OrmMaterial3D)BlockMaterial.Duplicate();
-                        ((OrmMaterial3D)mat).Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
-                        ((OrmMaterial3D)mat).AlbedoColor = block.ColorTint;
-                        ((OrmMaterial3D)mat).AlbedoTexture = SetTextureFromBlock(block.AlbedoTexture, MissingTexture);
-                        ((OrmMaterial3D)mat).NormalTexture = SetTextureFromBlock(block.NormalTexture, MissingTexture);
-                        ((OrmMaterial3D)mat).OrmTexture = SetTextureFromBlock(block.OrmTexture, DefaultOrm);
-                        break;
-                    case Resource.Block.BlockMaterialEnum.Custom:
-                        mat = (Material)block.CustomMaterial.Duplicate();
+                    case Block.BlockMaterialEnum.Custom:
+                        mat = (OrmMaterial3D)block.CustomMaterial.Duplicate(true);
                         break;
                 }
 
                 blockMaterials.Add(id, mat);
             }
 
-            RenderingServer.InstanceSetSurfaceOverrideMaterial(meshInstance, surfaceIndex, mat.GetRid());
+            RenderingServer.InstanceSetSurfaceOverrideMaterial(meshInstanceData.MeshRid, surfaceIndex, mat.GetRid());
             surfaceIndex++;
         }
-
-        surfaceBlockIds = null;
     }
 
     public void CreatePhysics()
     {
-        if (physicsMeshInstance.IsValid)
-            PhysicsServer3D.FreeRid(physicsMeshInstance);
-
         if (MeshGenerating) return;
+
+        if (meshInstanceData.PhysicsMeshRid.IsValid)
+        {
+            PhysicsServer3D.FreeRid(meshInstanceData.PhysicsMeshRid);
+            meshInstanceData.PhysicsMeshRid = default;
+        }
+        if (meshInstanceData.PhysicsMeshShape.IsValid)
+        {
+            PhysicsServer3D.FreeRid(meshInstanceData.PhysicsMeshShape);
+            meshInstanceData.PhysicsMeshShape = default;
+        }
+
+        if (surfaceBlockIds is null || surfaceBlockIds.Count == 0) return;
+        if (meshInstanceData.PhysicsMeshFaces.Count % 3 != 0)
+        {
+            GD.PushError("Physics shape does not have vertex count divisible by 3.");
+            return;
+        }
+
         var transform = new Transform3D(Basis.Identity, ChunkPosition.ToVector3Scaled());
-        physicsMeshInstance = PhysicsServer3D.BodyCreate();
-        physicsMeshInstanceShape = PhysicsServer3D.ConcavePolygonShapeCreate();
-        var physicsMeshData = new Godot.Collections.Dictionary<string, Variant>() { { "faces", physicsMeshFaces.ToArray() }, { "backface_collision", false } };
-        PhysicsServer3D.ShapeSetData(physicsMeshInstanceShape, physicsMeshData);
-        PhysicsServer3D.BodyAddShape(physicsMeshInstance, physicsMeshInstanceShape);
-        PhysicsServer3D.BodySetMode(physicsMeshInstance, PhysicsServer3D.BodyMode.Static);
-        PhysicsServer3D.BodySetState(physicsMeshInstance, PhysicsServer3D.BodyState.Transform, transform);
-        PhysicsServer3D.BodySetSpace(physicsMeshInstance, world3D.Space);
+        meshInstanceData.PhysicsMeshRid = PhysicsServer3D.BodyCreate();
+        meshInstanceData.PhysicsMeshShape = PhysicsServer3D.ConcavePolygonShapeCreate();
+        meshInstanceData.PhysicsMeshData = new Godot.Collections.Dictionary<string, Variant>() { { "faces", meshInstanceData.PhysicsMeshFaces.ToArray() }, { "backface_collision", false } };
+        PhysicsServer3D.ShapeSetData(meshInstanceData.PhysicsMeshShape, meshInstanceData.PhysicsMeshData);
+        PhysicsServer3D.BodyAddShape(meshInstanceData.PhysicsMeshRid, meshInstanceData.PhysicsMeshShape);
+        PhysicsServer3D.BodySetMode(meshInstanceData.PhysicsMeshRid, PhysicsServer3D.BodyMode.Static);
+        PhysicsServer3D.BodySetState(meshInstanceData.PhysicsMeshRid, PhysicsServer3D.BodyState.Transform, transform);
+        PhysicsServer3D.BodySetSpace(meshInstanceData.PhysicsMeshRid, world3D.Space);
     }
 
     private static Texture2D SetTextureFromBlock(Texture2D resourceTexture, Texture2D errTexture)
     {
-        if (resourceTexture is not null) return resourceTexture;
+        if (GodotObject.IsInstanceValid(resourceTexture)) return resourceTexture;
         return errTexture;
     }
 }

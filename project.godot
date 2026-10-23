@@ -12,7 +12,7 @@ config_version=5
 
 config/name="voxel_mono"
 run/main_scene="uid://cfotvkk13a5d1"
-config/features=PackedStringArray("4.6", "C#", "Forward Plus")
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 run/max_fps=300
 config/icon="res://icon.svg"
 
@@ -31,7 +31,8 @@ project/assembly_name="voxel_mono"
 
 folder_colors={
 "res://Images/": "green",
-"res://Scripts/": "blue"
+"res://Scenes/": "blue",
+"res://Scripts/": "red"
 }
 
 [input]

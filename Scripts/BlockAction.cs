@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-using Godot;
-using Voxel;
+namespace Voxel;
 
 public class BlockAction
 {
@@ -16,7 +14,7 @@ public class BlockAction
 
     public virtual void Apply()
     {
-        var chunk = ChunkManager.FindChunk((ChunkVec3)Position);
+        var chunk = World.Chunk.ChunkFind((ChunkVec3)Position);
 
         if (Action == ActionType.Mine)
         {
@@ -90,7 +88,7 @@ public class BlockActionArea : BlockAction
 
         foreach (var value in changed)
         {
-            var chunk = ChunkManager.FindChunk(value.Key);
+            var chunk = World.Chunk.ChunkFind(value.Key);
 
             if (Action == ActionType.Mine)
             {

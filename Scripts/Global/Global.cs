@@ -1,4 +1,9 @@
-using System.Collections.Generic;
+global using System;
+global using System.Collections;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Threading.Tasks;
+global using Godot;
 using System.Diagnostics;
 
 namespace Voxel;
@@ -25,7 +30,7 @@ public static class Global
     {
         unchecked
         {
-            int hash = x;
+            int hash = x * 13466917;
             hash = hash * 2119412839 + y;
             hash = hash * 135040691 + z;
             return hash;
@@ -40,7 +45,7 @@ public static class Global
         unchecked
         {
             int hash = position.GetVecHash() * ChunkManager.Seed * seedOffset;
-            return System.Math.Abs(hash % 10000000 / 10000000f);
+            return System.Math.Abs(hash % 1000000 / 1000000f);
         }
     }
 

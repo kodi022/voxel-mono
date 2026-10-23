@@ -1,7 +1,6 @@
-using Godot;
-using System;
-using Voxel;
 using Voxel.World;
+
+namespace Voxel;
 
 public class ControllerFly : Controller
 {
@@ -57,7 +56,7 @@ public class ControllerFly : Controller
                     }
                     else
                     {
-                        Chunk.ChunkPlaceBlock(player.AimHitBlockFrontPosition, "base:brick");
+                        Chunk.ChunkPlaceBlock(player.AimHitBlockFrontPosition, "base:water");
                     }
                     break;
             }

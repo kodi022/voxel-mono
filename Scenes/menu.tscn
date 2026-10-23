@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cfotvkk13a5d1"]
 
-[ext_resource type="Script" uid="uid://bvfjqkrbpsigq" path="res://Scripts/Global/ChunkManagerMenu.cs" id="1_1rerr"]
 [ext_resource type="Script" uid="uid://c7adxxv672es0" path="res://Scripts/UI/Menu.cs" id="1_cayip"]
+[ext_resource type="Script" uid="uid://ca5dvpp1ay3xe" path="res://Scripts/Global/ChunkManager.cs" id="2_158mb"]
 [ext_resource type="FontFile" uid="uid://bu4mqn67khffn" path="res://Fonts/Teko-Bold.ttf" id="2_xhh6f"]
 [ext_resource type="FontFile" uid="uid://u738tvv68shv" path="res://Fonts/RobotoMono-Regular.ttf" id="4_158mb"]
 
@@ -17,8 +17,8 @@ font_size = 20
 script = ExtResource("1_cayip")
 buttonsControl = NodePath("Control")
 
-[node name="ChunkManagerMenu" type="Node3D" parent="." unique_id=988229279]
-script = ExtResource("1_1rerr")
+[node name="ChunkManager" type="Node3D" parent="." unique_id=988229279]
+script = ExtResource("2_158mb")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1453852261]
 transform = Transform3D(0.7489557, -0.15805706, 0.64349306, 0, 0.9711343, 0.23853347, -0.66262007, -0.178651, 0.7273366, 36.3558, 25.832977, 38.742874)

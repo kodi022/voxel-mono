@@ -1,6 +1,4 @@
-using Godot;
-using System;
-using Voxel;
+namespace Voxel;
 
 public class Controller
 {
@@ -20,9 +18,9 @@ public class Controller
     {
         if (@event is InputEventMouseMotion motionEvent && player.MouseState == Input.MouseModeEnum.Captured)
         {
-            var camRot = Mathf.Clamp(player.Camera3D.Rotation.X - motionEvent.Relative.Y * 0.01f, -1.5f, 1.5f);
+            var camRot = Mathf.Clamp(player.Camera3D.Rotation.X - motionEvent.Relative.Y * 0.001f, -1.5f, 1.5f);
             player.Camera3D.Rotation = new Vector3(camRot, 0, 0);
-            player.Rotation -= new Vector3(0, motionEvent.Relative.X * 0.01f, 0);
+            player.Rotation -= new Vector3(0, motionEvent.Relative.X * 0.001f, 0);
         }
     }
 }

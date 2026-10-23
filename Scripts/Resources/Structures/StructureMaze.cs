@@ -1,6 +1,3 @@
-using System.Threading.Tasks;
-using Godot;
-
 namespace Voxel.Resource;
 
 [GlobalClass]

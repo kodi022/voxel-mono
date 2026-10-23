@@ -1,44 +1,6 @@
-using Godot;
 using Voxel.World;
 
 namespace Voxel.Resource;
-
-// necessary to clone Blocks inside Chunk multithreaded
-public class BlockInstance(in Block self)
-{
-	public readonly Block BlockInfo = self;
-
-	// network these
-	public double Hp;
-	public double GeneratedMaxHp;
-	public int DirYaw;
-	public int DirPitch;
-	public Block.BlockShapeEnum Shape;
-
-	public static bool operator ==(BlockInstance self, int hashId) => self.BlockInfo.HashId == hashId;
-	public static bool operator !=(BlockInstance self, int hashId) => self.BlockInfo.HashId != hashId;
-	public static bool operator ==(BlockInstance self, string blockId) => self.BlockInfo.HashId == ResourceManager.GetBlock(blockId).HashId;
-	public static bool operator !=(BlockInstance self, string blockId) => self.BlockInfo.HashId != ResourceManager.GetBlock(blockId).HashId;
-	public static bool operator ==(BlockInstance left, BlockInstance right) => left.BlockInfo.HashId == right.BlockInfo.HashId;
-	public static bool operator !=(BlockInstance left, BlockInstance right) => left.BlockInfo.HashId != right.BlockInfo.HashId;
-
-	public static explicit operator BlockInstance(string blockId)
-	{
-		return ResourceManager.GetBlockInstance(blockId);
-	}
-
-	// required for == and =! operators
-	public override bool Equals(object obj)
-	{
-		return false;
-	}
-
-	// required for == and =! operators
-	public override int GetHashCode()
-	{
-		return base.GetHashCode();
-	}
-}
 
 [GlobalClass]
 public partial class Block : VoxelResource
@@ -109,7 +71,8 @@ public partial class Block : VoxelResource
 	public string EntityScenePath { get; set; }
 	[Export]
 	public Vector2 HpRange { get; set; } = new(2, 4);
-
+	[Export]
+	public bool UsesTick { get; set; } = false;
 
 	[Export, ExportGroup("Visual")]
 	public BlockDirectionsEnum BlockDirections { get; set; } = BlockDirectionsEnum.None;
@@ -123,6 +86,9 @@ public partial class Block : VoxelResource
 	[Export, ExportGroup("Visual")]
 	public BlockModelEnum BlockModel { get; set; } = BlockModelEnum.Default;
 
+	[Export(hintString: "The mesh name on a chunk this block generates in"), ExportGroup("Visual")]
+	public string ChunkMeshName { get; set; } = "main";
+
 	[Export, ExportSubgroup("Model.Custom")]
 	public Mesh Model { get; set; }
 
@@ -133,7 +99,7 @@ public partial class Block : VoxelResource
 	[Export, ExportSubgroup("Material.Default Material.Transparent")]
 	public Color ColorTint { get; set; } = Color.Color8(255, 255, 255);
 	[Export(hintString: "Uses alpha channel if Material.Transparent")]
-	public Texture2D AlbedoTexture { get; set; } // uses alpha channel if Material.Transparent
+	public Texture2D AlbedoTexture { get; set; }
 	[Export]
 	public Texture2D NormalTexture { get; set; }
 	[Export]
@@ -147,6 +113,9 @@ public partial class Block : VoxelResource
 	{
 		return new BlockInstance(this);
 	}
+
+	public virtual void OnStart(GenericInfo info) { }
+	public virtual void OnTick(GenericInfo info) { }
 
 	public virtual void OnHit(DamageInfo info)
 	{
@@ -166,8 +135,8 @@ public partial class Block : VoxelResource
 
 		info.BlockInstance.Hp -= info.Damage;
 
-		// sound?
-		// particle?
+		// sound
+		// particle
 		// block damage overlay?
 	}
 
@@ -179,47 +148,33 @@ public partial class Block : VoxelResource
 		// particle
 	}
 
-	public virtual void OnUpdate(DamageInfo info)
-	{
-	}
-
-	public virtual void OnTouch(DamageInfo info)
-	{
-	}
+	public virtual void OnTouch(DamageInfo info) { }
 
 	public virtual void OnLavaTouch(DamageInfo info)
 	{
 		// should consume by lava or not?
 	}
 
-
 	public virtual void GenerateProceduralMesh(ref Chunk.MeshGenerationData data)
 	{
-		if (data.Lod == 0)
+		switch (data.BlockInstance.Shape)
 		{
-			switch (data.BlockInstance.Shape)
-			{
-				case BlockShapeEnum.Block:
-					ProceduralBlockMesh(ref data);
-					break;
-				case BlockShapeEnum.Stair:
-					ProceduralStairMesh(ref data);
-					break;
-				case BlockShapeEnum.Slab:
-					ProceduralSlabMesh(ref data);
-					break;
-			}
-		}
-		else
-		{
-			ProceduralBlockMesh(ref data);
+			case BlockShapeEnum.Block:
+				ProceduralBlockMesh(ref data);
+				break;
+			case BlockShapeEnum.Stair:
+				ProceduralStairMesh(ref data);
+				break;
+			case BlockShapeEnum.Slab:
+				ProceduralSlabMesh(ref data);
+				break;
 		}
 	}
 
 	private void ProceduralBlockMesh(ref Chunk.MeshGenerationData data)
 	{
-		var blockSize = (sbyte)Mathf.Pow(2, data.Lod);
 		int x = data.PosDir.X, y = data.PosDir.Y, z = data.PosDir.Z, w = data.PosDir.W;
+		var blockSize = (sbyte)Mathf.Pow(2, data.Lod);
 
 		// mesh verts
 		switch (BlockTextureUV)
@@ -230,7 +185,7 @@ public partial class Block : VoxelResource
 					var off = Chunk.FaceVertexOffsets[w][v] * blockSize;
 					data.MeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
 					data.Normals.Add(Chunk.Directions[w]);
-					data.Uvs.Add((Vector2)Chunk.OneFaceUVs[v] * blockSize);
+					data.Uvs.Add((Vector2)Chunk.OneFaceUVs[v]);
 				}
 				break;
 			case BlockTextureUVEnum.TwoFacesUV:
@@ -238,26 +193,26 @@ public partial class Block : VoxelResource
 				//if (block.BlockDirections != )
 				for (int v = 0; v < 4; v++)
 				{
-					var off = Chunk.FaceVertexOffsets[w][v] * blockSize;
+					var off = Chunk.FaceVertexOffsets[w][v];
 					data.MeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
 					data.Normals.Add(Chunk.Directions[w]);
-					data.Uvs.Add(Chunk.TwoFaceUVs[indexOffset + v] * blockSize);
+					data.Uvs.Add(Chunk.TwoFaceUVs[indexOffset + v]);
 				}
 				break;
 			case BlockTextureUVEnum.SixFacesUV:
 				var indexOffset2 = w * 4;
 				for (int v = 0; v < 4; v++)
 				{
-					var off = Chunk.FaceVertexOffsets[w][v] * blockSize;
+					var off = Chunk.FaceVertexOffsets[w][v];
 					data.MeshVerts.Add(new Vector3(x + off.X, y + off.Y, z + off.Z));
 					data.Normals.Add(Chunk.Directions[w]);
-					data.Uvs.Add(Chunk.SixFaceUVs[indexOffset2 + v] * blockSize);
+					data.Uvs.Add(Chunk.SixFaceUVs[indexOffset2 + v]);
 				}
 				break;
 		}
 
 		var o = data.FaceCount * 4;
-		data.CurrentLodIndices.AddRange([
+		data.Indices.AddRange([
 			o, o + 1, o + 2,
 			o + 2, o + 3, o
 		]);
@@ -276,8 +231,6 @@ public partial class Block : VoxelResource
 
 	public virtual void GenerateProceduralPhysicsMesh(ref Chunk.MeshPhysicsGenerationData data)
 	{
-		if (data.Lod > 0) return;
-
 		int x = data.PosDir.X, y = data.PosDir.Y, z = data.PosDir.Z, w = data.PosDir.W;
 
 		var off = Chunk.FaceVertexOffsets[w][0];
@@ -315,8 +268,8 @@ public partial class Block : VoxelResource
 
 public struct DamageInfo
 {
-	// using temporary types until proper types are implemented
-	public string Player;
+	// using string until proper types are implemented
+	public string Entity;
 	public double Damage;
 	public string Tool;
 	public BlockVec3 BlockPosition;
@@ -328,12 +281,19 @@ public struct DamageInfo
 
 public struct TouchInfo
 {
-	// using temporary player until proper types are implemented
-	public string Player;
+	// using string until proper types are implemented
+	public string Entity;
 	public BlockVec3 BlockPosition;
 	public Vector3 Velocity;
 	public Vector3 HitPosition;
 	public Vector3 FaceNormal;
+	public Chunk Chunk;
+	public BlockInstance BlockInstance;
+}
+
+public struct GenericInfo
+{
+	public BlockVec3 BlockLocalPosition;
 	public Chunk Chunk;
 	public BlockInstance BlockInstance;
 }

@@ -1,5 +1,3 @@
-using System;
-using Godot;
 using Voxel.World;
 
 namespace Voxel;
@@ -14,8 +12,6 @@ public struct BlockVec3
     public int Y;
     public int Z;
 
-    public readonly LocalityEnum Locality = LocalityEnum.Global;
-
     public enum LocalityEnum
     {
         Global,
@@ -24,12 +20,11 @@ public struct BlockVec3
 
     public BlockVec3() { }
 
-    public BlockVec3(BlockVec3 v, LocalityEnum locality = LocalityEnum.Global)
+    public BlockVec3(BlockVec3 v)
     {
         X = v.X;
         Y = v.Y;
         Z = v.Z;
-        Locality = locality;
     }
 
     public BlockVec3(int x, int y, int z)
@@ -38,6 +33,9 @@ public struct BlockVec3
         Y = y;
         Z = z;
     }
+
+    public static bool operator ==(BlockVec3 v, BlockVec3 o) => v.GetVecHash() == o.GetVecHash();
+    public static bool operator !=(BlockVec3 v, BlockVec3 o) => v.GetVecHash() != o.GetVecHash();
 
     public static BlockVec3 operator %(BlockVec3 v, BlockVec3 o) => new(v.X % o.X, v.Y % o.Y, v.Z % o.Z);
     public static BlockVec3 operator *(BlockVec3 v, BlockVec3 o) => new(v.X * o.X, v.Y * o.Y, v.Z * o.Z);
@@ -76,22 +74,16 @@ public struct BlockVec3
     /// <returns>New BlockVec3 with localized values</returns>
     public readonly BlockVec3 ToLocal()
     {
-        var newVec = new BlockVec3(this, LocalityEnum.Local);
-        if (Locality == LocalityEnum.Local) return newVec;
-
-        return newVec % Chunk.ChunkSize;
+        return new BlockVec3(this) % Chunk.ChunkSize;
     }
 
     /// <summary>
-    /// Convert global block position to local to chunk. More efficient overload, but result may be outside of Chunk indexes.
+    /// Convert global block position to local to chunk. More efficient overload, but result may be outside of Chunk indexes when misused.
     /// </summary>
     /// <returns>New BlockVec3 with localized values</returns>
     public readonly BlockVec3 ToLocal(in ChunkVec3 chunkPos)
     {
-        var newVec = new BlockVec3(this, LocalityEnum.Local);
-        if (Locality == LocalityEnum.Local) return newVec;
-
-        return newVec - (BlockVec3)chunkPos;
+        return new BlockVec3(this) - (BlockVec3)chunkPos;
     }
 
     /// <summary>
@@ -127,10 +119,12 @@ public struct BlockVec3
     }
 
     public override readonly string ToString() => $"{X}, {Y}, {Z}";
+    public override readonly bool Equals(object obj) => obj.GetHashCode() == GetHashCode();
+    public override readonly int GetHashCode() => GetVecHash();
 }
 
 /// <summary>
-/// Position for Chunks. (1, 0, 0) == (16, 0, 0), or Chunk.ChunkSize
+/// Position for Chunks. ChunkVec3(1, 0, 0) == BlockVec3(16, 0, 0), or Chunk.ChunkSize
 /// </summary>
 public struct ChunkVec3
 {
@@ -152,12 +146,16 @@ public struct ChunkVec3
         Z = z;
     }
 
+    public static bool operator ==(ChunkVec3 v, ChunkVec3 o) => v.GetVecHash() == o.GetVecHash();
+    public static bool operator !=(ChunkVec3 v, ChunkVec3 o) => v.GetVecHash() != o.GetVecHash();
+
     public static ChunkVec3 operator %(ChunkVec3 v, int o) => new(v.X % o, v.Y % o, v.Z % o);
     public static ChunkVec3 operator *(ChunkVec3 v, int o) => new(v.X * o, v.Y * o, v.Z * o);
     public static ChunkVec3 operator /(ChunkVec3 v, int o) => new(v.X / o, v.Y / o, v.Z / o);
     public static ChunkVec3 operator +(ChunkVec3 v, int o) => new(v.X + o, v.Y + o, v.Z + o);
     public static ChunkVec3 operator -(ChunkVec3 v, int o) => new(v.X - o, v.Y - o, v.Z - o);
     public static ChunkVec3 operator +(ChunkVec3 v, ChunkVec3 o) => new(v.X + o.X, v.Y + o.Y, v.Z + o.Z);
+    public static ChunkVec3 operator -(ChunkVec3 v, ChunkVec3 o) => new(v.X - o.X, v.Y - o.Y, v.Z - o.Z);
     public static ChunkVec3 operator +(ChunkVec3 v, Vector3B o) => new(v.X + o.X, v.Y + o.Y, v.Z + o.Z);
 
     public static explicit operator ChunkVec3(BlockVec3 v) => new(v.X.FIntDiv(Chunk.ChunkSize), v.Y.FIntDiv(Chunk.ChunkSize), v.Z.FIntDiv(Chunk.ChunkSize));
@@ -170,6 +168,8 @@ public struct ChunkVec3
     public readonly int GetVecHash() => Global.StableHash(X, Y, Z);
 
     public override readonly string ToString() => $"{X}, {Y}, {Z}";
+    public override readonly bool Equals(object obj) => obj.GetHashCode() == GetHashCode();
+    public override readonly int GetHashCode() => GetVecHash();
 }
 
 /// <summary>
@@ -205,6 +205,8 @@ public struct RegionVec3
     public readonly int GetVecHash() => Global.StableHash(X, Y, Z);
 
     public override readonly string ToString() => $"{X}, {Y}, {Z}";
+    public override readonly bool Equals(object obj) => obj.GetHashCode() == GetHashCode();
+    public override readonly int GetHashCode() => GetVecHash();
 }
 
 public struct Vector3B

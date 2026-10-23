@@ -1,5 +1,3 @@
-using Godot;
-
 namespace Voxel;
 
 public static class Extensions

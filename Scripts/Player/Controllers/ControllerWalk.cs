@@ -1,6 +1,6 @@
-using Godot;
-using Voxel;
 using Voxel.World;
+
+namespace Voxel;
 
 public class ControllerWalk : Controller
 {
@@ -21,6 +21,8 @@ public class ControllerWalk : Controller
 
     public override void ControllerPhysicsProcess(double delta, in Player player)
     {
+        if (player.WithinChunk is null || player.WithinChunk.MeshGenerating) return;
+
         base.ControllerPhysicsProcess(delta, player);
 
         timeSinceHit += delta;
@@ -36,7 +38,7 @@ public class ControllerWalk : Controller
                     BlockPosition = player.AimHitBlockPosition,
                     Damage = player.DrillLevel * 0.1d,
                     FaceNormal = player.AimHitNormal,
-                    Player = player.Name,
+                    Entity = player.Name,
                     HitPosition = player.AimHitPosition,
                     Tool = "drill"
                 };
@@ -95,7 +97,6 @@ public class ControllerWalk : Controller
             if (trace.TryGetValue("position", out Variant value))
             {
                 var pos = (Vector3)value;
-                GD.Print(pos);
                 var difference = pos.Y - stepCheckPos.Y;
                 if (difference < 0.51f && difference > 0.01f)
                 {

@@ -1,8 +1,4 @@
-using Godot;
-using System;
-using Voxel.World;
-
-namespace Voxel;
+namespace Voxel.Ui;
 
 public partial class HUD : Panel
 {
@@ -29,23 +25,25 @@ public partial class HUD : Panel
 		PositionLabel.Text = $"{BlockVec3.FromVector3(Player.Self.GlobalPosition)}";
 		if (Player.Self.AimHitBlock is not null)
 		{
-			if (lastBlock != Player.Self.AimHitBlockPosition.ToVector3()) hpLerp = Player.Self.AimHitBlock.Hp;
+			if (!Player.Self.AimHitBlock.BlockInfo.Unbreakable || Player.Self.AimHitBlock == 0)
+			{
+				if (lastBlock != Player.Self.AimHitBlockPosition.ToVector3()) hpLerp = Player.Self.AimHitBlock.Hp;
 
-			lastBlock = Player.Self.AimHitBlockPosition.ToVector3();
+				lastBlock = Player.Self.AimHitBlockPosition.ToVector3();
 
-			hpLerp = Mathf.Lerp(hpLerp, Player.Self.AimHitBlock.Hp, delta * 10f);
-			BlockNameLabel.Text = Player.Self.AimHitBlock.BlockInfo.Name;
-			BlockHealthLabel.Text = ParseHealth(hpLerp);
-			BlockHealthBar.Position = new Vector2(((float)(hpLerp / Player.Self.AimHitBlock.GeneratedMaxHp) - 1f) * BlockHealthBar.Size.X, 0);
-			if (!this.Visible) this.Show();
+				hpLerp = Mathf.Lerp(hpLerp, Player.Self.AimHitBlock.Hp, delta * 10f);
+				BlockNameLabel.Text = Player.Self.AimHitBlock.BlockInfo.Name;
+				BlockHealthLabel.Text = ParseHealth(hpLerp);
+				BlockHealthBar.Position = new Vector2(((float)(hpLerp / Player.Self.AimHitBlock.GeneratedMaxHp) - 1f) * BlockHealthBar.Size.X, 0);
+				if (!this.Visible) this.Show();
+				return;
+			}
 		}
-		else
-		{
-			if (this.Visible) this.Hide();
-			BlockNameLabel.Text = "";
-			BlockHealthLabel.Text = "";
-			BlockHealthBar.Position = new Vector2(0, 0);
-		}
+
+		if (this.Visible) this.Hide();
+		BlockNameLabel.Text = "";
+		BlockHealthLabel.Text = "";
+		BlockHealthBar.Position = new Vector2(0, 0);
 	}
 
 	private string ParseHealth(double hp)
